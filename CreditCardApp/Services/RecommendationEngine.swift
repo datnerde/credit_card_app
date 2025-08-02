@@ -2,9 +2,28 @@ import Foundation
 
 class RecommendationEngine {
     private let nlpProcessor: NLPProcessor
+    private var recommendationCache: [String: RecommendationResponse] = [:]
+    private var cacheMaxSize: Int = 100
     
     init(nlpProcessor: NLPProcessor = NLPProcessor()) {
         self.nlpProcessor = nlpProcessor
+    }
+    
+    // MARK: - Caching
+    
+    func getCachedRecommendation(for key: String) -> RecommendationResponse? {
+        return recommendationCache[key]
+    }
+    
+    func cacheRecommendation(_ response: RecommendationResponse, for key: String) {
+        recommendationCache[key] = response
+        
+        // Simple LRU - remove oldest entries if cache gets too large
+        if recommendationCache.count > cacheMaxSize {
+            let keys = Array(recommendationCache.keys)
+            let keysToRemove = keys.dropLast(cacheMaxSize)
+            keysToRemove.forEach { recommendationCache.removeValue(forKey: $0) }
+        }
     }
     
     // MARK: - Main Recommendation Flow
@@ -365,19 +384,4 @@ enum RecommendationError: Error, LocalizedError {
     }
 }
 
-// MARK: - Performance Optimization
-
-extension RecommendationEngine {
-    private var recommendationCache: [String: RecommendationResponse] = [:]
-    private let cacheExpiration: TimeInterval = 300 // 5 minutes
-    
-    func getCachedRecommendation(for key: String) -> RecommendationResponse? {
-        // Implementation with expiration check
-        return nil // Placeholder for caching implementation
-    }
-    
-    func cacheRecommendation(_ response: RecommendationResponse, for key: String) {
-        // Implementation with timestamp
-        // Placeholder for caching implementation
-    }
-} 
+ 

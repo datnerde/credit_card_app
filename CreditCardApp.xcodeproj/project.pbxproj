@@ -7,8 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A1234567890123456789012A /* CreditCardAppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012B /* CreditCardAppApp.swift */; };
-		A1234567890123456789012C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012D /* ContentView.swift */; };
+		A1234567890123456789012Z /* CreditCardAppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012B /* CreditCardAppApp.swift */; };
+		A234567890123456789CORE2 /* CoreDataEntities.swift in Sources */ = {isa = PBXBuildFile; fileRef = A234567890123456789CORE1 /* CoreDataEntities.swift */; };
+		A1234567890123456789012C /* Views/ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012D /* Views/ContentView.swift */; };
 		A1234567890123456789012E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789012F /* Assets.xcassets */; };
 		A1234567890123456789013A /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789013B /* Preview Assets.xcassets */; };
 		A1234567890123456789014A /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1234567890123456789014B /* ChatViewModel.swift */; };
@@ -38,7 +39,8 @@
 /* Begin PBXFileReference section */
 		A1234567890123456789012A /* CreditCardApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CreditCardApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1234567890123456789012B /* CreditCardAppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditCardAppApp.swift; sourceTree = "<group>"; };
-		A1234567890123456789012D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A234567890123456789CORE1 /* CoreDataEntities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CreditCardApp/CoreDataEntities.swift"; sourceTree = "<group>"; };
+		A1234567890123456789012D /* Views/ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/ContentView.swift; sourceTree = "<group>"; };
 		A1234567890123456789012F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1234567890123456789013B /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		A1234567890123456789014B /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
@@ -80,7 +82,7 @@
 			isa = PBXGroup;
 			children = (
 				A1234567890123456789012B /* CreditCardAppApp.swift */,
-				A1234567890123456789012D /* ContentView.swift */,
+				A1234567890123456789012D /* Views/ContentView.swift */,
 				A123456789012345678901BC /* Models */,
 				A123456789012345678901BD /* Services */,
 				A123456789012345678901BE /* ViewModels */,
@@ -290,8 +292,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1234567890123456789012C /* ContentView.swift in Sources */,
-				A1234567890123456789012A /* CreditCardAppApp.swift in Sources */,
+				A1234567890123456789012C /* Views/ContentView.swift in Sources */,
+				A1234567890123456789012Z /* CreditCardAppApp.swift in Sources */,
+				A234567890123456789CORE2 /* CoreDataEntities.swift in Sources */,
 				A1234567890123456789014A /* ChatViewModel.swift in Sources */,
 				A1234567890123456789014C /* SettingsViewModel.swift in Sources */,
 				A1234567890123456789014E /* BaseViewModel.swift in Sources */,

@@ -89,6 +89,21 @@ class ChatViewModel: BaseViewModelImpl {
         }
     }
     
+    func clearChatHistory() {
+        Task {
+            do {
+                try await dataManager.clearChatHistory()
+                await MainActor.run {
+                    self.messages.removeAll()
+                }
+            } catch {
+                await MainActor.run {
+                    handleError(error)
+                }
+            }
+        }
+    }
+    
     // MARK: - Private Methods
     
     private func setupBindings() {
@@ -285,12 +300,16 @@ class ChatViewModel: BaseViewModelImpl {
     // MARK: - Performance Monitoring
     
     func measureRecommendationPerformance(_ query: String) async -> RecommendationResponse? {
-        return await measureAsyncPerformance("recommendation_processing") {
-            try await self.recommendationEngine.getRecommendation(
-                for: query,
-                userCards: self.userCards,
-                userPreferences: self.userPreferences
-            )
+        do {
+            return try await measureAsyncPerformance("recommendation_processing") {
+                try await self.recommendationEngine.getRecommendation(
+                    for: query,
+                    userCards: self.userCards,
+                    userPreferences: self.userPreferences
+                )
+            }
+        } catch {
+            return nil
         }
     }
 }

@@ -240,25 +240,25 @@ class AnalyticsService: ObservableObject {
 
 // MARK: - Supporting Types
 
-struct AnalyticsEvent {
+struct AnalyticsEvent: Codable {
     let name: String
-    let properties: [String: Any]
+    let properties: [String: String]
     let timestamp: Date
     
     init(name: String, properties: [String: Any]) {
         self.name = name
-        self.properties = properties
+        self.properties = properties.mapValues { "\($0)" }
         self.timestamp = Date()
     }
 }
 
-struct AnalyticsData {
+struct AnalyticsData: Codable {
     let events: [AnalyticsEvent]
     let summary: AnalyticsSummary
     let timestamp: Date
 }
 
-struct AnalyticsSummary {
+struct AnalyticsSummary: Codable {
     let totalEvents: Int
     let uniqueSessions: Int
     let eventCounts: [String: Int]

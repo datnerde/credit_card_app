@@ -3,7 +3,7 @@ import CoreData
 
 // MARK: - Credit Card Model
 struct CreditCard: Codable, Identifiable {
-    let id: UUID
+    var id: UUID
     var name: String
     var cardType: CardType
     var rewardCategories: [RewardCategory]

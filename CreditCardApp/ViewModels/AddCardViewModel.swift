@@ -7,6 +7,7 @@ class AddCardViewModel: BaseViewModelImpl {
     @Published var selectedRewardCategories: Set<SpendingCategory> = []
     @Published var spendingLimits: [SpendingLimit] = []
     @Published var quarterlyBonus: QuarterlyBonus?
+    @Published var isActive: Bool = true
     @Published var isEditing: Bool = false
     @Published var editingCard: CreditCard?
     
@@ -34,6 +35,7 @@ class AddCardViewModel: BaseViewModelImpl {
         cardName = card.name
         selectedCardType = card.cardType
         selectedRewardCategories = Set(card.rewardCategories.map { $0.category })
+        isActive = card.isActive
         
         // Setup spending limits
         spendingLimits = card.spendingLimits
@@ -243,7 +245,7 @@ class AddCardViewModel: BaseViewModelImpl {
             rewardCategories: rewardCategories,
             quarterlyBonus: quarterlyBonus,
             spendingLimits: spendingLimits,
-            isActive: true
+            isActive: isActive
         )
     }
     

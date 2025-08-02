@@ -197,33 +197,35 @@ class SettingsViewModel: BaseViewModelImpl {
             let importedData = try decoder.decode(ExportData.self, from: data)
             
             Task {
-                // Import cards
-                for card in importedData.cards {
-                    try await dataManager.saveCard(card)
-                }
-                
-                // Import messages
-                for message in importedData.messages {
-                    try await dataManager.saveChatMessage(message)
-                }
-                
-                // Import preferences
-                try await dataManager.saveUserPreferences(importedData.preferences)
-                
-                // Update local preferences
-                await MainActor.run {
-                    self.userPreferences = importedData.preferences
-                }
-                
-                // Track data import
-                trackEvent("data_imported", properties: [
-                    "cards_count": importedData.cards.count,
-                    "messages_count": importedData.messages.count
-                ])
-                
-            } catch {
-                await MainActor.run {
-                    handleError(error)
+                do {
+                    // Import cards
+                    for card in importedData.cards {
+                        try await dataManager.saveCard(card)
+                    }
+                    
+                    // Import messages
+                    for message in importedData.messages {
+                        try await dataManager.saveChatMessage(message)
+                    }
+                    
+                    // Import preferences
+                    try await dataManager.saveUserPreferences(importedData.preferences)
+                    
+                    // Update local preferences
+                    await MainActor.run {
+                        self.userPreferences = importedData.preferences
+                    }
+                    
+                    // Track data import
+                    trackEvent("data_imported", properties: [
+                        "cards_count": importedData.cards.count,
+                        "messages_count": importedData.messages.count
+                    ])
+                    
+                } catch {
+                    await MainActor.run {
+                        handleError(error)
+                    }
                 }
             }
             
@@ -357,7 +359,15 @@ struct ExportData: Codable {
     let messages: [ChatMessage]
     let preferences: UserPreferences
     let exportDate: Date
-    let version: String = "1.0"
+    let version: String
+    
+    init(cards: [CreditCard], messages: [ChatMessage], preferences: UserPreferences, exportDate: Date) {
+        self.cards = cards
+        self.messages = messages
+        self.preferences = preferences
+        self.exportDate = exportDate
+        self.version = "1.0"
+    }
 }
 
 // MARK: - SettingsViewModel Extensions

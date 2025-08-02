@@ -23,7 +23,7 @@ class ServiceContainer: ObservableObject {
     }()
     
     lazy var dataManager: DataManager = {
-        DataManager(coreDataStack: CoreDataStack.shared)
+        DataManager(persistenceController: persistenceController)
     }()
     
     lazy var nlpProcessor: NLPProcessor = {

@@ -305,7 +305,7 @@ class CardListViewModel: BaseViewModelImpl {
                 for card in importedCards {
                     try await dataManager.saveCard(card)
                 }
-                await loadCards()
+                loadCards()
             }
             
         } catch {

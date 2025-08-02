@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct CardListView: View {
-    @EnvironmentObject var viewModel: CardListViewModel
+    @StateObject private var viewModel = ViewModelFactory.makeCardListViewModel()
     @State private var showingAddCard = false
     
     var body: some View {
@@ -35,6 +35,9 @@ struct CardListView: View {
                 CardDetailView(card: card)
             }
         }
+        .onAppear {
+            viewModel.loadCards()
+        }
         .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
             Button("OK") {
                 viewModel.clearError()
@@ -50,7 +53,7 @@ struct CardListView: View {
         List {
             ForEach(viewModel.cards) { card in
                 CardRowView(card: card) {
-                    viewModel.selectCard(card)
+                    // Navigation handled by NavigationLink in CardRowView
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button("Delete", role: .destructive) {
@@ -258,5 +261,4 @@ struct EmptyStateView: View {
 
 #Preview {
     CardListView()
-        .environmentObject(CardListViewModel(dataManager: ServiceContainer.shared.dataManager))
 } 

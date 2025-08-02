@@ -19,8 +19,8 @@ struct SettingsView: View {
                             
                             Spacer()
                             
-                            if viewModel.preferences.preferredPointSystem == pointSystem {
-                                Image(systemName: "checkmark")
+                            if viewModel.userPreferences.preferredPointSystem == pointSystem {
+                                Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.blue)
                             }
                         }
@@ -31,29 +31,29 @@ struct SettingsView: View {
                     }
                 }
                 
-                // Alert Settings
-                Section("Alert Thresholds") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text("Limit Warning:")
-                                .font(.body)
-                            
-                            Spacer()
-                            
-                            Text("\(Int(viewModel.preferences.alertThreshold * 100))%")
-                                .font(.body)
-                                .fontWeight(.medium)
+                // Quarterly Bonus Tracking
+                Section("Quarterly Bonus Tracking") {
+                    Toggle("Enable Quarterly Tracking", isOn: $viewModel.userPreferences.autoUpdateSpending)
+                        .onChange(of: viewModel.userPreferences.autoUpdateSpending) { _ in
+                            viewModel.toggleAutoUpdateSpending()
                         }
+                }
+                
+                // Alert Settings
+                Section("Alert Settings") {
+                    Toggle("Enable Notifications", isOn: $viewModel.userPreferences.notificationsEnabled)
+                        .onChange(of: viewModel.userPreferences.notificationsEnabled) { _ in
+                            viewModel.toggleNotifications()
+                        }
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Alert Threshold: \(Int(viewModel.userPreferences.alertThreshold * 100))%")
+                            .font(.body)
                         
-                        Slider(
-                            value: Binding(
-                                get: { viewModel.preferences.alertThreshold },
-                                set: { viewModel.updateAlertThreshold($0) }
-                            ),
-                            in: 0.5...1.0,
-                            step: 0.05
-                        )
-                        .accentColor(.blue)
+                        Slider(value: $viewModel.userPreferences.alertThreshold, in: 0.5...1.0, step: 0.05)
+                            .onChange(of: viewModel.userPreferences.alertThreshold) { newValue in
+                                viewModel.updateAlertThreshold(newValue)
+                            }
                     }
                 }
                 
@@ -66,8 +66,8 @@ struct SettingsView: View {
                             
                             Spacer()
                             
-                            if viewModel.preferences.language == language {
-                                Image(systemName: "checkmark")
+                            if viewModel.userPreferences.language == language {
+                                Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.blue)
                             }
                         }
@@ -78,27 +78,16 @@ struct SettingsView: View {
                     }
                 }
                 
-                // Notification Settings
-                Section("Notifications") {
-                    Toggle("Enable Notifications", isOn: Binding(
-                        get: { viewModel.preferences.notificationsEnabled },
-                        set: { _ in viewModel.toggleNotifications() }
-                    ))
-                    
-                    Toggle("Auto Update Spending", isOn: Binding(
-                        get: { viewModel.preferences.autoUpdateSpending },
-                        set: { _ in viewModel.toggleAutoUpdateSpending() }
-                    ))
-                }
-                
                 // Data Management
                 Section("Data Management") {
-                    Button("Export Data") {
+                    NavigationLink("Export Data") {
+                        EmptyView()
+                    }
+                    .onTapGesture {
                         viewModel.showingExportSheet = true
                     }
-                    .foregroundColor(.blue)
                     
-                    Button("Reset All Data") {
+                    Button("Reset All Data", role: .destructive) {
                         viewModel.showingResetAlert = true
                     }
                     .foregroundColor(.red)
@@ -108,21 +97,14 @@ struct SettingsView: View {
                 Section("App Information") {
                     HStack {
                         Text("Version")
-                            .font(.body)
-                        
                         Spacer()
-                        
-                        Text("1.0.0")
-                            .font(.body)
+                        Text(viewModel.getAppVersion())
                             .foregroundColor(.secondary)
                     }
                     
                     HStack {
                         Text("Build")
-                            .font(.body)
-                        
                         Spacer()
-                        
                         Text("1")
                             .font(.body)
                             .foregroundColor(.secondary)
@@ -130,7 +112,6 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.large)
         }
         .alert("Reset All Data", isPresented: $viewModel.showingResetAlert) {
             Button("Cancel", role: .cancel) { }
@@ -141,7 +122,7 @@ struct SettingsView: View {
             Text("This will delete all your cards, chat history, and preferences. This action cannot be undone.")
         }
         .sheet(isPresented: $viewModel.showingExportSheet) {
-            ExportDataView(data: viewModel.exportData())
+            ExportDataView(data: viewModel.exportData)
         }
         .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
             Button("OK") {
@@ -165,20 +146,19 @@ struct ExportDataView: View {
                 Text(data)
                     .font(.system(.body, design: .monospaced))
                     .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .navigationTitle("Exported Data")
+            .navigationTitle("Export Data")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Done") {
                         dismiss()
                     }
                 }
                 
-                ToolbarItem(placement: .navigationBarLeading) {
-                    ShareLink(item: data) {
-                        Image(systemName: "square.and.arrow.up")
-                    }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    ShareLink("Share", item: data)
                 }
             }
         }
@@ -187,4 +167,4 @@ struct ExportDataView: View {
 
 #Preview {
     SettingsView()
-} 
+}
