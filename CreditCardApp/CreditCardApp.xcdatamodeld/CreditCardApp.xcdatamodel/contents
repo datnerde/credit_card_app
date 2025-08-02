@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22522" systemVersion="23C71" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="YES" userDefinedModelVersionIdentifier="">
+    <entity name="CardRecommendationEntity" representedClassName="CardRecommendationEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="cardId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="cardName" optional="YES" attributeType="String"/>
+        <attribute name="category" optional="YES" attributeType="String"/>
+        <attribute name="currentSpending" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isLimitReached" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="limit" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="multiplier" optional="YES" attributeType="Double" defaultValueString="1.0" usesScalarValueType="YES"/>
+        <attribute name="pointType" optional="YES" attributeType="String"/>
+        <attribute name="rank" optional="YES" attributeType="Integer 16" defaultValueString="1" usesScalarValueType="YES"/>
+        <attribute name="reasoning" optional="YES" attributeType="String"/>
+        <relationship name="chatMessage" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ChatMessageEntity" inverseName="cardRecommendations" inverseEntity="ChatMessageEntity"/>
+    </entity>
+    <entity name="ChatMessageEntity" representedClassName="ChatMessageEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="content" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="sender" optional="YES" attributeType="String"/>
+        <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="cardRecommendations" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CardRecommendationEntity" inverseName="chatMessage" inverseEntity="CardRecommendationEntity"/>
+        <relationship name="spendingUpdate" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="SpendingUpdateEntity" inverseName="chatMessage" inverseEntity="SpendingUpdateEntity"/>
+    </entity>
+    <entity name="CreditCardEntity" representedClassName="CreditCardEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="cardType" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isActive" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="quarterlyBonus" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="QuarterlyBonusEntity" inverseName="creditCard" inverseEntity="QuarterlyBonusEntity"/>
+        <relationship name="rewardCategories" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="RewardCategoryEntity" inverseName="creditCard" inverseEntity="RewardCategoryEntity"/>
+        <relationship name="spendingLimits" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="SpendingLimitEntity" inverseName="creditCard" inverseEntity="SpendingLimitEntity"/>
+    </entity>
+    <entity name="QuarterlyBonusEntity" representedClassName="QuarterlyBonusEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="category" optional="YES" attributeType="String"/>
+        <attribute name="currentSpending" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="limit" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="multiplier" optional="YES" attributeType="Double" defaultValueString="1.0" usesScalarValueType="YES"/>
+        <attribute name="pointType" optional="YES" attributeType="String"/>
+        <attribute name="quarter" optional="YES" attributeType="Integer 16" defaultValueString="1" usesScalarValueType="YES"/>
+        <attribute name="year" optional="YES" attributeType="Integer 16" defaultValueString="2024" usesScalarValueType="YES"/>
+        <relationship name="creditCard" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CreditCardEntity" inverseName="quarterlyBonus" inverseEntity="CreditCardEntity"/>
+    </entity>
+    <entity name="RewardCategoryEntity" representedClassName="RewardCategoryEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="category" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isActive" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="multiplier" optional="YES" attributeType="Double" defaultValueString="1.0" usesScalarValueType="YES"/>
+        <attribute name="pointType" optional="YES" attributeType="String"/>
+        <relationship name="creditCard" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CreditCardEntity" inverseName="rewardCategories" inverseEntity="CreditCardEntity"/>
+    </entity>
+    <entity name="SpendingLimitEntity" representedClassName="SpendingLimitEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="category" optional="YES" attributeType="String"/>
+        <attribute name="currentSpending" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="limit" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="resetDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="resetType" optional="YES" attributeType="String"/>
+        <relationship name="creditCard" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CreditCardEntity" inverseName="spendingLimits" inverseEntity="CreditCardEntity"/>
+    </entity>
+    <entity name="SpendingUpdateEntity" representedClassName="SpendingUpdateEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="amount" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="cardId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="category" optional="YES" attributeType="String"/>
+        <attribute name="previousAmount" optional="YES" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <relationship name="chatMessage" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="ChatMessageEntity" inverseName="spendingUpdate" inverseEntity="ChatMessageEntity"/>
+    </entity>
+    <entity name="UserPreferencesEntity" representedClassName="UserPreferencesEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="alertThreshold" optional="YES" attributeType="Double" defaultValueString="0.85" usesScalarValueType="YES"/>
+        <attribute name="autoUpdateSpending" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="languageString" optional="YES" attributeType="String"/>
+        <attribute name="notificationsEnabled" optional="YES" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="preferredPointSystemString" optional="YES" attributeType="String"/>
+    </entity>
+</model> 
