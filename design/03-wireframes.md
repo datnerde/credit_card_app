@@ -7,6 +7,75 @@
 - **Tab 2**: My Cards (Card Management)
 - **Tab 3**: Settings (Preferences)
 
+## UI Architecture Flow
+
+```mermaid
+graph TB
+    subgraph "Main App Structure"
+        A[ContentView] --> B[TabView]
+        B --> C[ChatView]
+        B --> D[CardListView]
+        B --> E[SettingsView]
+    end
+    
+    subgraph "Chat Interface"
+        C --> F[ChatBubbleView]
+        C --> G[ChatInputView]
+        C --> H[AITypingIndicatorView]
+        C --> I[CardRecommendationView]
+    end
+    
+    subgraph "AI-Enhanced Components"
+        J[AI Status Indicator] --> K[Device Compatibility Badge]
+        L[Smart Suggestions] --> M[Quick Actions]
+        N[Context Awareness] --> O[Conversation Memory]
+    end
+    
+    subgraph "Settings & Preferences"
+        E --> P[AISettingsView]
+        E --> Q[Privacy Controls]
+        E --> R[Model Configuration]
+    end
+    
+    C --> J
+    C --> L
+    C --> N
+    E --> P
+    
+    style J fill:#ff6b6b
+    style L fill:#4ecdc4
+    style N fill:#45b7d1
+    style P fill:#96ceb4
+```
+
+## User Interface States
+
+```mermaid
+stateDiagram-v2
+    [*] --> AppLaunch
+    AppLaunch --> DeviceCheck
+    DeviceCheck --> AppleIntelligenceMode: iOS 18+ & Apple Silicon
+    DeviceCheck --> FallbackMode: iOS 16-17 or Older Device
+    
+    AppleIntelligenceMode --> ChatInterface
+    FallbackMode --> ChatInterface
+    
+    ChatInterface --> ProcessingQuery: User Input
+    ProcessingQuery --> AITypingIndicator: Apple Intelligence Mode
+    ProcessingQuery --> StandardLoading: Fallback Mode
+    
+    AITypingIndicator --> DisplayRecommendation: AI Response
+    StandardLoading --> DisplayRecommendation: Rule-Based Response
+    
+    DisplayRecommendation --> ChatInterface: Continue Chat
+    DisplayRecommendation --> UpdateSpending: User Action
+    UpdateSpending --> ChatInterface
+    
+    style AppleIntelligenceMode fill:#4ecdc4
+    style FallbackMode fill:#ff6b6b
+    style AITypingIndicator fill:#45b7d1
+```
+
 ## Screen-by-Screen Wireframes
 
 ### 1. Chat Interface (Main Screen)

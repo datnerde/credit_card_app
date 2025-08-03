@@ -7,6 +7,74 @@
 - **User-Centric Testing**: Focus on real user scenarios and pain points
 - **Performance Testing**: Ensure app remains responsive and efficient
 - **Accessibility Testing**: Ensure app is usable by all users
+- **AI-Specific Testing**: Comprehensive testing of Apple Intelligence and RAG systems
+
+## AI Testing Architecture
+
+```mermaid
+graph TB
+    subgraph "Testing Layers"
+        A[Unit Tests] --> B[Integration Tests]
+        B --> C[AI System Tests]
+        C --> D[End-to-End Tests]
+        D --> E[User Acceptance Tests]
+    end
+    
+    subgraph "AI Testing Components"
+        F[Apple Intelligence Model Tests] --> G[RAG System Tests]
+        G --> H[Vector Storage Tests]
+        H --> I[Prompt Engineering Tests]
+        I --> J[Response Parsing Tests]
+    end
+    
+    subgraph "Performance Testing"
+        K[Inference Speed Tests] --> L[Memory Usage Tests]
+        L --> M[Battery Impact Tests]
+        M --> N[Vector Search Performance]
+    end
+    
+    subgraph "Quality Assurance"
+        O[Accuracy Validation] --> P[Privacy Compliance]
+        P --> Q[Device Compatibility]
+        Q --> R[Fallback System Tests]
+    end
+    
+    C --> F
+    C --> K
+    C --> O
+    
+    style F fill:#ff6b6b
+    style G fill:#4ecdc4
+    style K fill:#45b7d1
+    style O fill:#96ceb4
+```
+
+## AI Testing Strategy
+
+```mermaid
+flowchart TD
+    A[Test Planning] --> B{Device Type}
+    B -->|Apple Intelligence Compatible| C[Full AI Testing]
+    B -->|Legacy Device| D[Fallback Testing]
+    
+    C --> E[Apple Intelligence Model Tests]
+    E --> F[RAG System Tests]
+    F --> G[Performance Benchmarks]
+    G --> H[Accuracy Validation]
+    
+    D --> I[Rule-Based Engine Tests]
+    I --> J[Keyword Matching Tests]
+    J --> K[Basic Recommendation Tests]
+    
+    H --> L[Integration Testing]
+    K --> L
+    L --> M[End-to-End Testing]
+    M --> N[User Acceptance Testing]
+    
+    style C fill:#4ecdc4
+    style D fill:#ff6b6b
+    style L fill:#45b7d1
+```
 
 ### Testing Pyramid
 ```

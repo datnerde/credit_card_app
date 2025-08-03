@@ -1,8 +1,54 @@
 # User Stories & Use Cases
 
-## Primary User Stories
+## User Experience Flow
 
-### 1. Card Management
+```mermaid
+journey
+    title Credit Card AI Assistant User Journey
+    section Initial Setup
+      Add Credit Cards: 5: User
+      Configure Preferences: 4: User
+      AI Model Initialization: 5: System
+    section Daily Usage
+      Ask Natural Language Question: 5: User
+      AI Processing & RAG Retrieval: 4: System
+      Receive Intelligent Recommendation: 5: User
+      Update Spending (Optional): 3: User
+    section Advanced Features
+      Multi-turn Conversation: 4: User
+      Context-Aware Follow-ups: 5: User
+      Predictive Insights: 4: System
+      Limit Alerts: 5: System
+```
+
+## AI Interaction Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Chat
+    participant RAG
+    participant AI
+    participant Data
+    
+    User->>Chat: "I'm buying groceries at Whole Foods for $150"
+    Chat->>RAG: Process Query
+    RAG->>Data: Retrieve User Cards & Context
+    Data->>RAG: Return Card Profiles & Spending
+    RAG->>AI: Build Contextual Prompt
+    AI->>AI: Process with Foundation Model
+    AI->>RAG: Return Structured Response
+    RAG->>Chat: Format Recommendation
+    Chat->>User: "Use Amex Gold (4x MR points). You have $200 remaining in your quarterly limit."
+    
+    User->>Chat: "What about for dining tonight?"
+    Chat->>RAG: Process Follow-up Query
+    RAG->>RAG: Include Previous Context
+    RAG->>AI: Enhanced Contextual Prompt
+    AI->>Chat: "Amex Gold also offers 4x on dining. Your dining limit is at 85% - consider using CSR as backup."
+```
+
+## Primary User Stories
 **As a credit card user,**
 - I want to add my existing credit cards to the app
 - So that the system can recommend the best card for my purchases

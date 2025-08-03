@@ -1,9 +1,77 @@
 # MVP Definition & Scope Boundaries
 
 ## Project Overview
-**Credit Card Chat Recommendation & Limit Reminder App**
+**Credit Card Chat Recommendation & Limit Reminder App with Apple Intelligence**
 
-A conversational iOS app that helps users choose the best credit card for their purchases and manages credit limits intelligently.
+A conversational iOS app that leverages Apple Intelligence and RAG (Retrieval-Augmented Generation) to help users choose the best credit card for their purchases and manages credit limits intelligently.
+
+## MVP Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "User Experience"
+        A[Natural Language Input] --> B[Conversational Interface]
+        B --> C[Intelligent Recommendations]
+        C --> D[Context-Aware Responses]
+    end
+    
+    subgraph "Apple Intelligence Core"
+        E[Foundation Model 3B] --> F[RAG Processing]
+        F --> G[Vector Similarity Search]
+        G --> H[Context Building]
+        H --> I[Structured Response Generation]
+    end
+    
+    subgraph "Data Management"
+        J[Credit Card Profiles] --> K[Vector Embeddings]
+        K --> L[Spending Patterns]
+        L --> M[User Preferences]
+        M --> N[Conversation History]
+    end
+    
+    subgraph "Device Compatibility"
+        O[iOS 18+ & Apple Silicon] --> P[Full AI Experience]
+        Q[iOS 16-17 or Older] --> R[Rule-Based Fallback]
+    end
+    
+    A --> E
+    I --> C
+    N --> H
+    O --> E
+    Q --> R
+    
+    style E fill:#ff6b6b
+    style F fill:#4ecdc4
+    style P fill:#45b7d1
+    style R fill:#96ceb4
+```
+
+## Feature Scope Matrix
+
+```mermaid
+mindmap
+  root((Credit Card AI App))
+    Core Features
+      Natural Language Chat
+      Card Recommendations
+      Limit Tracking
+      Spending Alerts
+    Apple Intelligence
+      On-Device Processing
+      RAG System
+      Vector Storage
+      Context Awareness
+    Device Support
+      iOS 18+ (Full AI)
+      iOS 16-17 (Fallback)
+      iPhone 15 Pro+
+      M1 iPad+
+    Privacy & Security
+      100% On-Device
+      No Data Transmission
+      Local Vector Storage
+      Encrypted Conversations
+```
 
 ## MVP Core Objective
 **Single Focus**: Users input "I want to buy X", and the system recommends the best credit card from their existing cards, explains why, and alerts when limits are reached with automatic suggestions to switch cards.

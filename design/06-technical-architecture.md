@@ -5,41 +5,157 @@
 ### Core Technologies
 - **Language**: Swift 5.9+
 - **UI Framework**: SwiftUI
-- **Data Persistence**: Core Data
-- **Architecture Pattern**: MVVM (Model-View-ViewModel)
+- **AI Framework**: Apple Intelligence (iOS 18+)
+- **Data Persistence**: Core Data with Vector Storage
+- **Architecture Pattern**: MVVM + RAG (Retrieval-Augmented Generation)
 - **Dependency Management**: Swift Package Manager
-- **Minimum iOS Version**: iOS 16.0+
+- **Minimum iOS Version**: iOS 18.0+ (for Apple Intelligence), iOS 16.0+ (fallback)
 
-### Third-Party Dependencies
+## System Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Presentation Layer"
+        A[SwiftUI Views] --> B[ViewModels]
+        B --> C[Service Layer]
+    end
+    
+    subgraph "Service Layer"
+        C --> D[Apple Intelligence RAG Service]
+        C --> E[Legacy Rule Engine]
+        C --> F[Data Manager]
+        C --> G[Analytics Service]
+    end
+    
+    subgraph "AI Layer"
+        D --> H[Foundation Model 3B]
+        D --> I[Vector Store]
+        D --> J[Context Builder]
+        D --> K[Response Parser]
+    end
+    
+    subgraph "Data Layer"
+        F --> L[Core Data Stack]
+        I --> L
+        L --> M[Vector Storage]
+        L --> N[User Data]
+        L --> O[Conversation History]
+    end
+    
+    subgraph "Device Layer"
+        H --> P[Apple Silicon Neural Engine]
+        I --> Q[Vector Operations]
+        R[Device Compatibility Checker]
+    end
+    
+    style H fill:#ff6b6b
+    style I fill:#4ecdc4
+    style D fill:#45b7d1
+    style L fill:#96ceb4
+```
+
+## Device Compatibility Architecture
+
+```mermaid
+flowchart TD
+    A[App Launch] --> B{Device Check}
+    B -->|iOS 18+ & Apple Silicon| C[Apple Intelligence Mode]
+    B -->|iOS 16-17 or Older Device| D[Legacy Mode]
+    
+    C --> E[Initialize Foundation Model]
+    E --> F[Setup Vector Storage]
+    F --> G[RAG Processing Enabled]
+    
+    D --> H[Initialize Rule Engine]
+    H --> I[Keyword Matching]
+    I --> J[Basic Recommendations]
+    
+    G --> K[Hybrid Recommendation Engine]
+    J --> K
+    K --> L[User Interface]
+    
+    style C fill:#4ecdc4
+    style D fill:#ff6b6b
+    style K fill:#45b7d1
+```
+
+### Apple Intelligence Integration
+```swift
+// Apple Intelligence Framework
+import AppleIntelligence
+import CoreML
+
+// Foundation Models Framework for on-device AI
+frameworks: [
+    "AppleIntelligence.framework",
+    "CoreML.framework", 
+    "Foundation.framework",
+    "SwiftUI.framework"
+]
+```
+
+### Enhanced Dependencies
 ```swift
 // Swift Package Manager Dependencies
 dependencies: [
     .package(url: "https://github.com/onevcat/Kingfisher.git", from: "7.0.0"), // Image loading
     .package(url: "https://github.com/Alamofire/Alamofire.git", from: "5.0.0"), // Networking (future use)
-    .package(url: "https://github.com/realm/SwiftLint.git", from: "0.50.0") // Code quality
+    .package(url: "https://github.com/realm/SwiftLint.git", from: "0.50.0"), // Code quality
+    .package(url: "https://github.com/apple/swift-numerics.git", from: "1.0.0") // Vector operations
 ]
 ```
 
-## Project Structure
+### Device Requirements
+```swift
+// Apple Intelligence Requirements
+enum DeviceCompatibility {
+    case appleIntelligenceSupported // iPhone 15 Pro+, M1 iPad+
+    case fallbackModeOnly // iPhone 12+, older iPads
+    
+    var supportsOnDeviceAI: Bool {
+        switch self {
+        case .appleIntelligenceSupported: return true
+        case .fallbackModeOnly: return false
+        }
+    }
+}
+```
+
+## Apple Intelligence RAG Project Structure
 
 ```
 CreditCardApp/
 ├── App/
 │   ├── CreditCardApp.swift
-│   └── AppDelegate.swift
+│   └── ServiceContainer.swift
 ├── Models/
 │   ├── Core/
 │   │   ├── CreditCard.swift
 │   │   ├── SpendingCategory.swift
 │   │   ├── UserPreferences.swift
 │   │   └── ChatMessage.swift
+│   ├── RAG/
+│   │   ├── VectorStorage/
+│   │   │   ├── CardEmbedding.swift
+│   │   │   ├── QueryEmbedding.swift
+│   │   │   └── VectorStore.swift
+│   │   ├── Context/
+│   │   │   ├── UserContext.swift
+│   │   │   ├── RetrievedContext.swift
+│   │   │   └── ConversationContext.swift
+│   │   └── Response/
+│   │       ├── RAGResponse.swift
+│   │       ├── RAGMetrics.swift
+│   │       └── AppleIntelligenceFormat.swift
 │   ├── Extensions/
 │   │   ├── CreditCard+Extensions.swift
-│   │   └── Date+Extensions.swift
+│   │   ├── Date+Extensions.swift
+│   │   └── Array+VectorOperations.swift
 │   └── CoreData/
 │       ├── CreditCardApp.xcdatamodeld
 │       ├── CoreDataManager.swift
-│       └── CoreDataStack.swift
+│       ├── CoreDataStack.swift
+│       └── VectorStorageManager.swift
 ├── Views/
 │   ├── Main/
 │   │   ├── ContentView.swift
@@ -71,11 +187,32 @@ CreditCardApp/
 │   ├── SettingsViewModel.swift
 │   └── BaseViewModel.swift
 ├── Services/
-│   ├── RecommendationEngine.swift
-│   ├── NLPProcessor.swift
-│   ├── DataManager.swift
-│   ├── NotificationService.swift
-│   └── AnalyticsService.swift
+│   ├── AppleIntelligence/
+│   │   ├── AppleIntelligenceRAGService.swift
+│   │   ├── FoundationModelManager.swift
+│   │   ├── EmbeddingService.swift
+│   │   └── PromptBuilder.swift
+│   ├── RAG/
+│   │   ├── VectorStoreService.swift
+│   │   ├── UserContextBuilder.swift
+│   │   ├── ResponseParser.swift
+│   │   └── RAGCache.swift
+│   ├── Legacy/
+│   │   ├── RecommendationEngine.swift (fallback)
+│   │   ├── NLPProcessor.swift (fallback)
+│   │   └── HybridRecommendationEngine.swift
+│   ├── Data/
+│   │   ├── DataManager.swift
+│   │   ├── CoreDataStack.swift
+│   │   └── VectorDataManager.swift
+│   ├── Analytics/
+│   │   ├── AnalyticsService.swift
+│   │   ├── RAGMetricsCollector.swift
+│   │   └── AIPerformanceMonitor.swift
+│   └── Utils/
+│       ├── NotificationService.swift
+│       ├── DeviceCompatibilityChecker.swift
+│       └── AIModelVersionManager.swift
 ├── Utils/
 │   ├── Constants.swift
 │   ├── Extensions/
