@@ -12,9 +12,9 @@ class CardListViewModel: BaseViewModelImpl {
     private let dataManager: DataManager
     private var cancellables = Set<AnyCancellable>()
     
-    init(dataManager: DataManager) {
+    init(dataManager: DataManager, analyticsService: AnalyticsService) {
         self.dataManager = dataManager
-        super.init()
+        super.init(analyticsService: analyticsService)
         
         setupBindings()
         loadCards()
@@ -24,8 +24,16 @@ class CardListViewModel: BaseViewModelImpl {
     
     func loadCards() {
         Task {
-            await performAsyncTask {
-                try await self.dataManager.fetchCards()
+            do {
+                let fetchedCards = try await dataManager.fetchCards()
+                await MainActor.run {
+                    self.cards = fetchedCards
+                    self.setLoading(false)
+                }
+            } catch {
+                await MainActor.run {
+                    self.handleError(error)
+                }
             }
         }
     }

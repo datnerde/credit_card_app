@@ -4,10 +4,24 @@ import Combine
 class AddCardViewModel: BaseViewModelImpl {
     @Published var cardName: String = ""
     @Published var selectedCardType: CardType = .custom
+    @Published var selectedCategories: Set<SpendingCategory> = []
+    @Published var categoryMultipliers: [SpendingCategory: Double] = [:]
+    @Published var categoryPointTypes: [SpendingCategory: PointType] = [:]
+    @Published var categoryLimits: [SpendingCategory: Double] = [:]
+    @Published var isActive: Bool = true
+    
+    // Quarterly bonus properties
+    @Published var hasQuarterlyBonus: Bool = false
+    @Published var quarterlyBonusQuarter: Int = 1
+    @Published var quarterlyBonusCategory: SpendingCategory = .groceries
+    @Published var quarterlyBonusMultiplier: Double = 5.0
+    @Published var quarterlyBonusLimit: Double = 1500.0
+    @Published var quarterlyBonusPointType: PointType = .cashBack
+    
+    // Legacy properties for backward compatibility
     @Published var selectedRewardCategories: Set<SpendingCategory> = []
     @Published var spendingLimits: [SpendingLimit] = []
     @Published var quarterlyBonus: QuarterlyBonus?
-    @Published var isActive: Bool = true
     @Published var isEditing: Bool = false
     @Published var editingCard: CreditCard?
     
@@ -18,12 +32,82 @@ class AddCardViewModel: BaseViewModelImpl {
     private let dataManager: DataManager
     private var cancellables = Set<AnyCancellable>()
     
-    init(dataManager: DataManager) {
+    init(dataManager: DataManager, analyticsService: AnalyticsService) {
         self.dataManager = dataManager
-        super.init()
+        super.init(analyticsService: analyticsService)
         
         setupBindings()
         setupValidation()
+    }
+    
+    // MARK: - New Methods for Enhanced UI
+    
+    func toggleCategory(_ category: SpendingCategory, isSelected: Bool) {
+        if isSelected {
+            selectedCategories.insert(category)
+            if categoryMultipliers[category] == nil {
+                categoryMultipliers[category] = getDefaultMultiplier(for: category)
+            }
+            if categoryPointTypes[category] == nil {
+                categoryPointTypes[category] = getPointTypeForCard()
+            }
+        } else {
+            selectedCategories.remove(category)
+            categoryMultipliers.removeValue(forKey: category)
+            categoryPointTypes.removeValue(forKey: category)
+            categoryLimits.removeValue(forKey: category)
+        }
+        updateLegacyProperties()
+        validateForm()
+    }
+    
+    func updateMultiplier(_ category: SpendingCategory, multiplier: Double) {
+        categoryMultipliers[category] = multiplier
+        updateLegacyProperties()
+        validateForm()
+    }
+    
+    func updatePointType(_ category: SpendingCategory, pointType: PointType) {
+        categoryPointTypes[category] = pointType
+        updateLegacyProperties()
+        validateForm()
+    }
+    
+    private func getDefaultMultiplier(for category: SpendingCategory) -> Double {
+        if let defaultReward = selectedCardType.defaultRewards.first(where: { $0.category == category }) {
+            return defaultReward.multiplier
+        }
+        return 1.0
+    }
+    
+    private func updateLegacyProperties() {
+        selectedRewardCategories = selectedCategories
+        
+        // Update spending limits
+        spendingLimits = selectedCategories.compactMap { category in
+            guard let limit = categoryLimits[category], limit > 0 else { return nil }
+            return SpendingLimit(
+                category: category,
+                limit: limit,
+                currentSpending: 0.0,
+                resetDate: calculateResetDate(for: .annually),
+                resetType: .annually
+            )
+        }
+        
+        // Update quarterly bonus
+        if hasQuarterlyBonus {
+            quarterlyBonus = QuarterlyBonus(
+                category: quarterlyBonusCategory,
+                multiplier: quarterlyBonusMultiplier,
+                pointType: quarterlyBonusPointType,
+                limit: quarterlyBonusLimit,
+                currentSpending: 0.0,
+                quarter: quarterlyBonusQuarter
+            )
+        } else {
+            quarterlyBonus = nil
+        }
     }
     
     // MARK: - Public Methods
@@ -46,42 +130,43 @@ class AddCardViewModel: BaseViewModelImpl {
         validateForm()
     }
     
-    func saveCard() {
+    func saveCard() async {
         guard isFormValid else { return }
         
-        Task {
-            do {
-                let card = createCardFromForm()
+        do {
+            updateLegacyProperties() // Ensure legacy properties are up to date
+            let card = createCardFromForm()
+            
+            if isEditing {
+                try await dataManager.updateCard(card)
                 
-                if isEditing {
-                    try await dataManager.updateCard(card)
-                    
-                    // Track card update
-                    trackEvent("card_updated", properties: [
-                        "card_type": card.cardType.rawValue,
-                        "card_id": card.id.uuidString,
-                        "reward_categories_count": card.rewardCategories.count,
-                        "has_quarterly_bonus": card.quarterlyBonus != nil
-                    ])
-                } else {
-                    try await dataManager.saveCard(card)
-                    
-                    // Track card addition
-                    trackEvent("card_added", properties: [
-                        "card_type": card.cardType.rawValue,
-                        "has_quarterly_bonus": card.quarterlyBonus != nil,
-                        "reward_categories_count": card.rewardCategories.count
-                    ])
-                }
+                // Track card update
+                let event = AnalyticsEvent(name: "card_updated", properties: [
+                    "card_type": card.cardType.rawValue,
+                    "card_id": card.id.uuidString,
+                    "reward_categories_count": card.rewardCategories.count,
+                    "has_quarterly_bonus": card.quarterlyBonus != nil
+                ])
+                analyticsService?.trackEvent(event)
+            } else {
+                try await dataManager.saveCard(card)
                 
-                await MainActor.run {
-                    resetForm()
-                }
-                
-            } catch {
-                await MainActor.run {
-                    handleError(error)
-                }
+                // Track card addition
+                let event = AnalyticsEvent(name: "card_added", properties: [
+                    "card_type": card.cardType.rawValue,
+                    "has_quarterly_bonus": card.quarterlyBonus != nil,
+                    "reward_categories_count": card.rewardCategories.count
+                ])
+                analyticsService?.trackEvent(event)
+            }
+            
+            await MainActor.run {
+                resetForm()
+            }
+            
+        } catch {
+            await MainActor.run {
+                handleError(error)
             }
         }
     }
@@ -89,6 +174,18 @@ class AddCardViewModel: BaseViewModelImpl {
     func resetForm() {
         cardName = ""
         selectedCardType = .custom
+        selectedCategories.removeAll()
+        categoryMultipliers.removeAll()
+        categoryPointTypes.removeAll()
+        categoryLimits.removeAll()
+        hasQuarterlyBonus = false
+        quarterlyBonusQuarter = 1
+        quarterlyBonusCategory = .groceries
+        quarterlyBonusMultiplier = 5.0
+        quarterlyBonusLimit = 1500.0
+        quarterlyBonusPointType = .cashBack
+        
+        // Legacy properties
         selectedRewardCategories.removeAll()
         spendingLimits.removeAll()
         quarterlyBonus = nil
@@ -168,9 +265,6 @@ class AddCardViewModel: BaseViewModelImpl {
         return selectedCardType.defaultRewards
     }
     
-    var hasQuarterlyBonus: Bool {
-        return quarterlyBonus != nil
-    }
     
     var formTitle: String {
         return isEditing ? "Edit Card" : "Add New Card"
@@ -204,7 +298,7 @@ class AddCardViewModel: BaseViewModelImpl {
         }
         
         // Validate reward categories
-        if selectedRewardCategories.isEmpty {
+        if selectedCategories.isEmpty && selectedRewardCategories.isEmpty {
             validationErrors.append("At least one reward category is required")
         }
         
@@ -225,15 +319,15 @@ class AddCardViewModel: BaseViewModelImpl {
             }
         }
         
-        isFormValid = validationErrors.isEmpty && !cardName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !selectedRewardCategories.isEmpty
+        isFormValid = validationErrors.isEmpty && !cardName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (!selectedCategories.isEmpty || !selectedRewardCategories.isEmpty)
     }
     
     private func createCardFromForm() -> CreditCard {
-        let rewardCategories = selectedRewardCategories.map { category in
+        let rewardCategories = selectedCategories.map { category in
             RewardCategory(
                 category: category,
-                multiplier: getMultiplierForCategory(category),
-                pointType: getPointTypeForCard(),
+                multiplier: categoryMultipliers[category] ?? 1.0,
+                pointType: categoryPointTypes[category] ?? getPointTypeForCard(),
                 isActive: true
             )
         }

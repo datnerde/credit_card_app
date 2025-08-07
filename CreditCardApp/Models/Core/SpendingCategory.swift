@@ -65,7 +65,7 @@ enum PointType: String, Codable, CaseIterable {
     case membershipRewards = "MR"
     case ultimateRewards = "UR"
     case thankYouPoints = "TYP"
-    case cashback = "Cash Back"
+    case cashBack = "Cash Back"
     case capitalOneMiles = "Capital One Miles"
     case discoverCashback = "Discover Cash Back"
     
@@ -74,7 +74,7 @@ enum PointType: String, Codable, CaseIterable {
         case .membershipRewards: return "Membership Rewards (MR)"
         case .ultimateRewards: return "Ultimate Rewards (UR)"
         case .thankYouPoints: return "ThankYou Points (TYP)"
-        case .cashback: return "Cash Back"
+        case .cashBack: return "Cash Back"
         case .capitalOneMiles: return "Capital One Miles"
         case .discoverCashback: return "Discover Cash Back"
         }
@@ -85,7 +85,7 @@ enum PointType: String, Codable, CaseIterable {
         case .membershipRewards: return "gold"
         case .ultimateRewards: return "blue"
         case .thankYouPoints: return "purple"
-        case .cashback: return "green"
+        case .cashBack: return "green"
         case .capitalOneMiles: return "orange"
         case .discoverCashback: return "red"
         }

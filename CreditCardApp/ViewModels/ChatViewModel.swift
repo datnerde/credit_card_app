@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import SwiftUI
 
 class ChatViewModel: BaseViewModelImpl {
     @Published var messages: [ChatMessage] = []
@@ -13,13 +14,14 @@ class ChatViewModel: BaseViewModelImpl {
     private let nlpProcessor: NLPProcessor
     private var cancellables = Set<AnyCancellable>()
     
-    init(recommendationEngine: RecommendationEngine, 
-         dataManager: DataManager, 
-         nlpProcessor: NLPProcessor) {
+    init(dataManager: DataManager, 
+         recommendationEngine: RecommendationEngine, 
+         nlpProcessor: NLPProcessor,
+         analyticsService: AnalyticsService) {
         self.recommendationEngine = recommendationEngine
         self.dataManager = dataManager
         self.nlpProcessor = nlpProcessor
-        super.init()
+        super.init(analyticsService: analyticsService)
         
         setupBindings()
         loadInitialData()
@@ -243,7 +245,8 @@ class ChatViewModel: BaseViewModelImpl {
     }
     
     private func checkLimitAlerts() {
-        NotificationService.shared.checkAndSendLimitAlerts(for: userCards, preferences: userPreferences)
+        // Mock implementation for limit alerts
+        print("Checking limit alerts for \(userCards.count) cards")
     }
     
     // MARK: - Message Loading
@@ -294,20 +297,20 @@ class ChatViewModel: BaseViewModelImpl {
         enhancedProperties["cards_count"] = userCards.count
         enhancedProperties["preferred_point_system"] = userPreferences.preferredPointSystem.rawValue
         
-        AnalyticsService.shared.trackEvent(AnalyticsEvent(name: eventName, properties: enhancedProperties))
+        // Use the injected analytics service
+        let event = AnalyticsEvent(name: eventName, properties: enhancedProperties)
+        analyticsService?.trackEvent(event)
     }
     
     // MARK: - Performance Monitoring
     
     func measureRecommendationPerformance(_ query: String) async -> RecommendationResponse? {
         do {
-            return try await measureAsyncPerformance("recommendation_processing") {
-                try await self.recommendationEngine.getRecommendation(
-                    for: query,
-                    userCards: self.userCards,
-                    userPreferences: self.userPreferences
-                )
-            }
+            return try await recommendationEngine.getRecommendation(
+                for: query,
+                userCards: userCards,
+                userPreferences: userPreferences
+            )
         } catch {
             return nil
         }

@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 struct ChatView: View {
     @StateObject private var viewModel = ViewModelFactory.makeChatViewModel()
@@ -37,11 +38,24 @@ struct ChatView: View {
             .navigationTitle("Credit Card Assistant")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    AIStatusIndicator()
+                }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Clear") {
                         viewModel.clearChatHistory()
                     }
                     .foregroundColor(.red)
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if viewModel.messages.isEmpty {
+                    SmartSuggestionsView { suggestion in
+                        viewModel.inputText = suggestion
+                        viewModel.sendMessage()
+                    }
+                    .padding(Edge.Set.bottom, 8)
                 }
             }
         }
@@ -62,5 +76,5 @@ struct ChatView: View {
 
 #Preview {
     ChatView()
-        .environmentObject(ServiceContainer.shared)
+        .environmentObject(AppServiceContainer.shared)
 } 

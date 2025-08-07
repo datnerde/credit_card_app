@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 struct CardListView: View {
     @StateObject private var viewModel = ViewModelFactory.makeCardListViewModel()
@@ -31,7 +32,7 @@ struct CardListView: View {
             .sheet(isPresented: $showingAddCard) {
                 AddCardView()
             }
-            .sheet(item: $viewModel.selectedCard) { card in
+            .sheet(item: $viewModel.selectedCard) { (card: CreditCard) in
                 CardDetailView(card: card)
             }
         }

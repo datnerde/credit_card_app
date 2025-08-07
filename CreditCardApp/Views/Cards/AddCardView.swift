@@ -21,8 +21,97 @@ struct AddCardView: View {
                 }
                 
                 Section("Reward Categories") {
-                    Text("Select reward categories for this card")
+                    Text("Select reward categories and multipliers")
                         .foregroundColor(.secondary)
+                    
+                    ForEach(SpendingCategory.allCases, id: \.self) { category in
+                        RewardCategoryRow(
+                            category: category,
+                            isSelected: viewModel.selectedCategories.contains(category),
+                            multiplier: viewModel.categoryMultipliers[category] ?? 1.0,
+                            pointType: viewModel.categoryPointTypes[category] ?? .cashBack,
+                            onToggle: { isSelected in
+                                viewModel.toggleCategory(category, isSelected: isSelected)
+                            },
+                            onMultiplierChange: { multiplier in
+                                viewModel.updateMultiplier(category, multiplier: multiplier)
+                            },
+                            onPointTypeChange: { pointType in
+                                viewModel.updatePointType(category, pointType: pointType)
+                            }
+                        )
+                    }
+                }
+                
+                if !viewModel.selectedCategories.isEmpty {
+                    Section("Spending Limits") {
+                        Text("Set quarterly/annual spending limits for bonus categories")
+                            .foregroundColor(.secondary)
+                        
+                        ForEach(viewModel.selectedCategories.sorted(by: { $0.displayName < $1.displayName }), id: \.self) { category in
+                            HStack {
+                                Image(systemName: category.icon)
+                                    .foregroundColor(.blue)
+                                    .frame(width: 20)
+                                
+                                Text(category.displayName)
+                                    .font(.subheadline)
+                                
+                                Spacer()
+                                
+                                TextField("Limit", value: Binding(
+                                    get: { viewModel.categoryLimits[category] ?? 0 },
+                                    set: { viewModel.categoryLimits[category] = $0 }
+                                ), format: .currency(code: "USD"))
+                                .textFieldStyle(.roundedBorder)
+                                .keyboardType(.decimalPad)
+                                .frame(width: 120)
+                            }
+                        }
+                    }
+                }
+                
+                Section("Quarterly Bonus (Optional)") {
+                    Toggle("Has Quarterly Bonus", isOn: $viewModel.hasQuarterlyBonus)
+                    
+                    if viewModel.hasQuarterlyBonus {
+                        Picker("Quarter", selection: $viewModel.quarterlyBonusQuarter) {
+                            ForEach(1...4, id: \.self) { quarter in
+                                Text("Q\(quarter)").tag(quarter)
+                            }
+                        }
+                        
+                        Picker("Bonus Category", selection: $viewModel.quarterlyBonusCategory) {
+                            ForEach(SpendingCategory.allCases, id: \.self) { category in
+                                Text(category.displayName).tag(category)
+                            }
+                        }
+                        
+                        HStack {
+                            Text("Multiplier:")
+                            Spacer()
+                            TextField("Multiplier", value: $viewModel.quarterlyBonusMultiplier, format: .number)
+                                .textFieldStyle(.roundedBorder)
+                                .keyboardType(.decimalPad)
+                                .frame(width: 80)
+                            Text("x")
+                        }
+                        
+                        HStack {
+                            Text("Limit:")
+                            Spacer()
+                            TextField("Limit", value: $viewModel.quarterlyBonusLimit, format: .currency(code: "USD"))
+                                .textFieldStyle(.roundedBorder)
+                                .keyboardType(.decimalPad)
+                                .frame(width: 120)
+                        }
+                        
+                        Picker("Point Type", selection: $viewModel.quarterlyBonusPointType) {
+                            ForEach(PointType.allCases, id: \.self) { pointType in
+                                Text(pointType.displayName).tag(pointType)
+                            }
+                        }
+                    }
                 }
             }
             .navigationTitle("Add Credit Card")

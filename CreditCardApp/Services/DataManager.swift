@@ -3,15 +3,15 @@ import CoreData
 
 // MARK: - Data Manager
 class DataManager: ObservableObject {
-    private let persistenceController: PersistenceController
+    private let coreDataStack: CoreDataStack
     
-    init(persistenceController: PersistenceController) {
-        self.persistenceController = persistenceController
+    init(coreDataStack: CoreDataStack = CoreDataStack.shared) {
+        self.coreDataStack = coreDataStack
     }
     
     // Convenience computed properties to match the expected interface
     private var container: NSPersistentContainer {
-        return persistenceController.container
+        return coreDataStack.persistentContainer
     }
     
     // MARK: - Credit Card Operations

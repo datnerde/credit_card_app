@@ -19,9 +19,11 @@ class BaseViewModelImpl: BaseViewModel {
         return errorMessage != nil
     }
     
+    let analyticsService: AnalyticsService?
     private var cancellables = Set<AnyCancellable>()
     
-    init() {
+    init(analyticsService: AnalyticsService? = nil) {
+        self.analyticsService = analyticsService
         setupErrorHandling()
     }
     
@@ -116,29 +118,12 @@ class BaseViewModelImpl: BaseViewModel {
     // MARK: - Analytics
     
     func trackEvent(_ eventName: String, properties: [String: Any] = [:]) {
-        AnalyticsService.shared.trackEvent(AnalyticsEvent(name: eventName, properties: properties))
+        let event = AnalyticsEvent(name: eventName, properties: properties)
+        analyticsService?.trackEvent(event)
     }
     
     func trackScreenView(_ screenName: String) {
-        AnalyticsService.shared.trackScreenView(screenName)
-    }
-    
-    func trackError(_ error: Error, context: String) {
-        AnalyticsService.shared.trackError(error: error, context: context)
-    }
-    
-    // MARK: - Performance Monitoring
-    
-    func measurePerformance<T>(_ operation: String, block: () throws -> T) rethrows -> T {
-        let timer = AnalyticsService.shared.startPerformanceTimer(for: operation)
-        defer { timer.stop() }
-        return try block()
-    }
-    
-    func measureAsyncPerformance<T>(_ operation: String, block: () async throws -> T) async rethrows -> T {
-        let timer = AnalyticsService.shared.startPerformanceTimer(for: operation)
-        defer { timer.stop() }
-        return try await block()
+        analyticsService?.trackScreenView(screenName)
     }
     
     // MARK: - Memory Management
@@ -229,29 +214,6 @@ enum DataError: LocalizedError {
     }
 }
 
-// MARK: - ViewModel Factory
-
-class ViewModelFactory {
-    static func makeChatViewModel() -> ChatViewModel {
-        return ChatViewModel(
-            recommendationEngine: ServiceContainer.shared.recommendationEngine,
-            dataManager: ServiceContainer.shared.dataManager,
-            nlpProcessor: ServiceContainer.shared.nlpProcessor
-        )
-    }
-    
-    static func makeCardListViewModel() -> CardListViewModel {
-        return CardListViewModel(dataManager: ServiceContainer.shared.dataManager)
-    }
-    
-    static func makeAddCardViewModel() -> AddCardViewModel {
-        return AddCardViewModel(dataManager: ServiceContainer.shared.dataManager)
-    }
-    
-    static func makeSettingsViewModel() -> SettingsViewModel {
-        return SettingsViewModel(dataManager: ServiceContainer.shared.dataManager)
-    }
-}
 
 // MARK: - ViewModel Extensions
 

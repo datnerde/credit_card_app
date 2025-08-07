@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 struct ChatInputView: View {
     @Binding var text: String

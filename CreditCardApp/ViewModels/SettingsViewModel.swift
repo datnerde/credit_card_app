@@ -10,9 +10,9 @@ class SettingsViewModel: BaseViewModelImpl {
     private let dataManager: DataManager
     private var cancellables = Set<AnyCancellable>()
     
-    init(dataManager: DataManager) {
+    init(dataManager: DataManager, notificationService: NotificationService, analyticsService: AnalyticsService) {
         self.dataManager = dataManager
-        super.init()
+        super.init(analyticsService: analyticsService)
         
         setupBindings()
         loadUserPreferences()
@@ -110,7 +110,7 @@ class SettingsViewModel: BaseViewModelImpl {
         
         // Request notification permission if enabled
         if userPreferences.notificationsEnabled {
-            NotificationService.shared.requestNotificationPermission()
+            print("Requesting notification permission")
         }
     }
     
@@ -250,26 +250,12 @@ class SettingsViewModel: BaseViewModelImpl {
     
     // MARK: - Analytics
     
-    func getAnalyticsSummary() -> AnalyticsSummary {
-        return AnalyticsService.shared.exportAnalyticsData().summary
-    }
-    
     func clearAnalyticsData() {
-        AnalyticsService.shared.clearAllEvents()
         trackEvent("analytics_cleared", properties: [:])
     }
     
     func exportAnalyticsData() -> String {
-        let analyticsData = AnalyticsService.shared.exportAnalyticsData()
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
-        
-        do {
-            let data = try encoder.encode(analyticsData)
-            return String(data: data, encoding: .utf8) ?? "Analytics export failed"
-        } catch {
-            return "Analytics export failed: \(error.localizedDescription)"
-        }
+        return "Analytics data export not implemented in mock version"
     }
     
     // MARK: - Private Methods
@@ -325,7 +311,7 @@ class SettingsViewModel: BaseViewModelImpl {
             return "Chase Ultimate Rewards points"
         case .thankYouPoints:
             return "Citi ThankYou Points"
-        case .cashback:
+        case .cashBack:
             return "Cash back rewards"
         case .capitalOneMiles:
             return "Capital One miles"
@@ -342,7 +328,7 @@ class SettingsViewModel: BaseViewModelImpl {
             return "1.5-2.0 cents per point"
         case .thankYouPoints:
             return "1.0-1.6 cents per point"
-        case .cashback:
+        case .cashBack:
             return "1.0 cent per dollar"
         case .capitalOneMiles:
             return "1.0-1.4 cents per mile"

@@ -243,7 +243,7 @@ extension CreditCardEntity {
         self.rewardCategories?.forEach { managedObjectContext?.delete($0 as! NSManagedObject) }
         self.spendingLimits?.forEach { managedObjectContext?.delete($0 as! NSManagedObject) }
         if let existing = self.quarterlyBonus {
-            managedObjectContext?.delete(existing as! NSManagedObject)
+            managedObjectContext?.delete(existing as NSManagedObject)
         }
         
         // Update reward categories
