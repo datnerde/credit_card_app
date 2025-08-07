@@ -300,7 +300,7 @@ class RecommendationEngine {
     // MARK: - Seasonal Bonus Detection
     
     func checkSeasonalBonuses(_ card: CreditCard, _ category: SpendingCategory) -> Double {
-        let currentQuarter = Calendar.current.component(.quarter, from: Date())
+        let currentQuarter = Calendar.currentQuarter
         let currentYear = Calendar.current.component(.year, from: Date())
         
         if let quarterlyBonus = card.quarterlyBonus,

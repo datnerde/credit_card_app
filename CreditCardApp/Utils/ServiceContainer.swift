@@ -1,10 +1,9 @@
-import SwiftUI
 import Foundation
 
-// Simple service container for the app
-class AppServiceContainer: ObservableObject {
-    static let shared = AppServiceContainer()
+class ServiceContainer: ObservableObject {
+    static let shared = ServiceContainer()
     
+    // Core services
     let dataManager: DataManager
     let recommendationEngine: RecommendationEngine
     let nlpProcessor: NLPProcessor
@@ -12,6 +11,7 @@ class AppServiceContainer: ObservableObject {
     let analyticsService: AnalyticsService
     
     private init() {
+        // Use real Core Data services for production
         self.dataManager = DataManager()
         self.recommendationEngine = RecommendationEngine()
         self.nlpProcessor = NLPProcessor()
@@ -32,13 +32,3 @@ class AppServiceContainer: ObservableObject {
         }
     }
 }
-
-@main
-struct CreditCardAppApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-                .environmentObject(AppServiceContainer.shared)
-        }
-    }
-} 

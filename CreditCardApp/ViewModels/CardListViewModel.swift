@@ -1,23 +1,33 @@
 import Foundation
 import Combine
 
-class CardListViewModel: BaseViewModelImpl {
+class CardListViewModel: ObservableObject {
     @Published var cards: [CreditCard] = []
     @Published var showingAddCard = false
     @Published var selectedCard: CreditCard?
     @Published var searchText = ""
     @Published var filterCategory: SpendingCategory?
     @Published var sortOption: CardSortOption = .name
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String?
+    
+    var hasError: Bool {
+        return errorMessage != nil
+    }
     
     private let dataManager: DataManager
+    private let analyticsService: AnalyticsService
     private var cancellables = Set<AnyCancellable>()
     
     init(dataManager: DataManager, analyticsService: AnalyticsService) {
         self.dataManager = dataManager
-        super.init(analyticsService: analyticsService)
+        self.analyticsService = analyticsService
         
-        setupBindings()
-        loadCards()
+        // Defer setup to avoid initialization crashes
+        DispatchQueue.main.async {
+            self.setupBindings()
+            self.loadCards()
+        }
     }
     
     // MARK: - Public Methods
@@ -28,7 +38,7 @@ class CardListViewModel: BaseViewModelImpl {
                 let fetchedCards = try await dataManager.fetchCards()
                 await MainActor.run {
                     self.cards = fetchedCards
-                    self.setLoading(false)
+                    self.isLoading = false
                 }
             } catch {
                 await MainActor.run {
@@ -141,8 +151,8 @@ class CardListViewModel: BaseViewModelImpl {
     func loadSampleData() {
         Task {
             do {
-                try await dataManager.loadSampleData()
-                await loadCards()
+                try await dataManager.loadSampleCardsData()
+                loadCards()
             } catch {
                 await MainActor.run {
                     handleError(error)
@@ -209,8 +219,9 @@ class CardListViewModel: BaseViewModelImpl {
     private func setupBindings() {
         // Auto-sort when cards change
         $cards
-            .sink { [weak self] _ in
-                self?.sortCards()
+            .sink { [weak self] cards in
+                guard let self = self, !cards.isEmpty else { return }
+                self.sortCards()
             }
             .store(in: &cancellables)
         
@@ -224,6 +235,8 @@ class CardListViewModel: BaseViewModelImpl {
     }
     
     private func sortCards() {
+        guard !cards.isEmpty else { return }
+        
         cards.sort { first, second in
             switch sortOption {
             case .name:
@@ -393,5 +406,39 @@ extension CardListViewModel {
         return cards.filter { card in
             card.rewardCategories.contains { $0.pointType == pointType }
         }
+    }
+    
+    // MARK: - Error Handling
+    
+    func handleError(_ error: Error) {
+        DispatchQueue.main.async {
+            self.errorMessage = error.localizedDescription
+            self.isLoading = false
+        }
+    }
+    
+    func clearError() {
+        DispatchQueue.main.async {
+            self.errorMessage = nil
+        }
+    }
+    
+    // MARK: - Loading State Management
+    
+    func setLoading(_ loading: Bool) {
+        DispatchQueue.main.async {
+            self.isLoading = loading
+        }
+    }
+    
+    // MARK: - Analytics
+    
+    func trackEvent(_ eventName: String, properties: [String: Any] = [:]) {
+        let event = AnalyticsEvent(name: eventName, properties: properties)
+        analyticsService.trackEvent(event)
+    }
+    
+    func trackScreenView(_ screenName: String) {
+        analyticsService.trackScreenView(screenName)
     }
 } 

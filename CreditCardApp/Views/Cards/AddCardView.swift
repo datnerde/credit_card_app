@@ -1,120 +1,90 @@
 import SwiftUI
 
 struct AddCardView: View {
-    @StateObject private var viewModel = ViewModelFactory.makeAddCardViewModel()
+    @StateObject private var viewModel: AddCardViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var showingError = false
+    
+    init() {
+        // Create a safe ViewModel instance
+        self._viewModel = StateObject(wrappedValue: AddCardViewModel(
+            dataManager: AppServiceContainer.shared.dataManager,
+            analyticsService: AppServiceContainer.shared.analyticsService
+        ))
+    }
     
     var body: some View {
         NavigationView {
             Form {
-                Section("Card Information") {
+                Section(header: Text("Card Information")) {
                     TextField("Card Name", text: $viewModel.cardName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
                     
                     Picker("Card Type", selection: $viewModel.selectedCardType) {
                         ForEach(CardType.allCases, id: \.self) { cardType in
                             Text(cardType.displayName).tag(cardType)
                         }
                     }
-                    
-                    Toggle("Active", isOn: $viewModel.isActive)
+                    .pickerStyle(MenuPickerStyle())
                 }
                 
-                Section("Reward Categories") {
-                    Text("Select reward categories and multipliers")
-                        .foregroundColor(.secondary)
-                    
-                    ForEach(SpendingCategory.allCases, id: \.self) { category in
-                        RewardCategoryRow(
+                Section(header: Text("Reward Categories")) {
+                    ForEach(SpendingCategory.allCases.prefix(10), id: \.self) { category in
+                        CategoryRowView(
                             category: category,
                             isSelected: viewModel.selectedCategories.contains(category),
                             multiplier: viewModel.categoryMultipliers[category] ?? 1.0,
-                            pointType: viewModel.categoryPointTypes[category] ?? .cashBack,
-                            onToggle: { isSelected in
-                                viewModel.toggleCategory(category, isSelected: isSelected)
-                            },
-                            onMultiplierChange: { multiplier in
-                                viewModel.updateMultiplier(category, multiplier: multiplier)
-                            },
-                            onPointTypeChange: { pointType in
-                                viewModel.updatePointType(category, pointType: pointType)
-                            }
-                        )
+                            pointType: viewModel.categoryPointTypes[category] ?? .membershipRewards,
+                            limit: viewModel.categoryLimits[category] ?? 0.0
+                        ) { isSelected in
+                            viewModel.toggleCategory(category, isSelected: isSelected)
+                        }
                     }
                 }
                 
-                if !viewModel.selectedCategories.isEmpty {
-                    Section("Spending Limits") {
-                        Text("Set quarterly/annual spending limits for bonus categories")
-                            .foregroundColor(.secondary)
+                if viewModel.selectedCardType == .chaseFreedom {
+                    Section(header: Text("Quarterly Bonus")) {
+                        Toggle("Has Quarterly Bonus", isOn: $viewModel.hasQuarterlyBonus)
                         
-                        ForEach(viewModel.selectedCategories.sorted(by: { $0.displayName < $1.displayName }), id: \.self) { category in
+                        if viewModel.hasQuarterlyBonus {
+                            Picker("Quarter", selection: $viewModel.quarterlyBonusQuarter) {
+                                ForEach(1...4, id: \.self) { quarter in
+                                    Text("Q\(quarter)").tag(quarter)
+                                }
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
+                            
+                            Picker("Category", selection: $viewModel.quarterlyBonusCategory) {
+                                ForEach([SpendingCategory.gas, .groceries, .dining, .online], id: \.self) { category in
+                                    Text(category.displayName).tag(category)
+                                }
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                            
                             HStack {
-                                Image(systemName: category.icon)
-                                    .foregroundColor(.blue)
-                                    .frame(width: 20)
-                                
-                                Text(category.displayName)
-                                    .font(.subheadline)
-                                
+                                Text("Multiplier:")
                                 Spacer()
-                                
-                                TextField("Limit", value: Binding(
-                                    get: { viewModel.categoryLimits[category] ?? 0 },
-                                    set: { viewModel.categoryLimits[category] = $0 }
-                                ), format: .currency(code: "USD"))
-                                .textFieldStyle(.roundedBorder)
-                                .keyboardType(.decimalPad)
-                                .frame(width: 120)
+                                TextField("5.0", value: $viewModel.quarterlyBonusMultiplier, format: .number)
+                                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                                    .frame(width: 80)
+                                Text("x")
+                            }
+                            
+                            HStack {
+                                Text("Limit:")
+                                Spacer()
+                                TextField("1500", value: $viewModel.quarterlyBonusLimit, format: .currency(code: "USD"))
+                                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                                    .frame(width: 100)
                             }
                         }
                     }
                 }
                 
-                Section("Quarterly Bonus (Optional)") {
-                    Toggle("Has Quarterly Bonus", isOn: $viewModel.hasQuarterlyBonus)
-                    
-                    if viewModel.hasQuarterlyBonus {
-                        Picker("Quarter", selection: $viewModel.quarterlyBonusQuarter) {
-                            ForEach(1...4, id: \.self) { quarter in
-                                Text("Q\(quarter)").tag(quarter)
-                            }
-                        }
-                        
-                        Picker("Bonus Category", selection: $viewModel.quarterlyBonusCategory) {
-                            ForEach(SpendingCategory.allCases, id: \.self) { category in
-                                Text(category.displayName).tag(category)
-                            }
-                        }
-                        
-                        HStack {
-                            Text("Multiplier:")
-                            Spacer()
-                            TextField("Multiplier", value: $viewModel.quarterlyBonusMultiplier, format: .number)
-                                .textFieldStyle(.roundedBorder)
-                                .keyboardType(.decimalPad)
-                                .frame(width: 80)
-                            Text("x")
-                        }
-                        
-                        HStack {
-                            Text("Limit:")
-                            Spacer()
-                            TextField("Limit", value: $viewModel.quarterlyBonusLimit, format: .currency(code: "USD"))
-                                .textFieldStyle(.roundedBorder)
-                                .keyboardType(.decimalPad)
-                                .frame(width: 120)
-                        }
-                        
-                        Picker("Point Type", selection: $viewModel.quarterlyBonusPointType) {
-                            ForEach(PointType.allCases, id: \.self) { pointType in
-                                Text(pointType.displayName).tag(pointType)
-                            }
-                        }
-                    }
+                Section(header: Text("Settings")) {
+                    Toggle("Active Card", isOn: $viewModel.isActive)
                 }
             }
-            .navigationTitle("Add Credit Card")
+            .navigationTitle(viewModel.isEditing ? "Edit Card" : "Add Card")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -127,21 +97,75 @@ struct AddCardView: View {
                     Button("Save") {
                         Task {
                             await viewModel.saveCard()
-                            if viewModel.errorMessage == nil {
+                            if !viewModel.hasError {
                                 dismiss()
-                            } else {
-                                showingError = true
                             }
                         }
                     }
-                    .disabled(viewModel.cardName.isEmpty)
+                    .disabled(!viewModel.isFormValid || viewModel.isLoading)
                 }
             }
-            .alert("Error", isPresented: $showingError) {
-                Button("OK") { }
+            .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+                Button("OK") {
+                    viewModel.clearError()
+                }
             } message: {
-                Text(viewModel.errorMessage ?? "An unknown error occurred")
+                if let errorMessage = viewModel.errorMessage {
+                    Text(errorMessage)
+                }
             }
+        }
+        .onAppear {
+            if let editingCard = viewModel.editingCard {
+                viewModel.loadCard(editingCard)
+            } else {
+                viewModel.loadDefaultsForCardType()
+            }
+        }
+    }
+}
+
+struct CategoryRowView: View {
+    let category: SpendingCategory
+    let isSelected: Bool
+    let multiplier: Double
+    let pointType: PointType
+    let limit: Double
+    let onToggle: (Bool) -> Void
+    
+    var body: some View {
+        HStack {
+            Button(action: { onToggle(!isSelected) }) {
+                HStack {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .foregroundColor(isSelected ? .blue : .gray)
+                    
+                    Image(systemName: category.icon)
+                        .foregroundColor(.blue)
+                        .frame(width: 20)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(category.displayName)
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        
+                        if isSelected {
+                            Text("\(multiplier, specifier: "%.1f")x \(pointType.rawValue)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    if isSelected && limit > 0 {
+                        Text(limit.asCurrency)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
         }
     }
 }

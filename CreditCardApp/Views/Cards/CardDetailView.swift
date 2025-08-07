@@ -3,35 +3,166 @@ import SwiftUI
 struct CardDetailView: View {
     let card: CreditCard
     @Environment(\.dismiss) private var dismiss
-    @State private var isEditing = false
-    @State private var editedCard: CreditCard
-    
-    init(card: CreditCard) {
-        self.card = card
-        self._editedCard = State(initialValue: card)
-    }
+    @State private var showingEditCard = false
     
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 24) {
                     // Card Header
-                    cardHeader
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Image(systemName: "creditcard.fill")
+                                .font(.title)
+                                .foregroundColor(.blue)
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(card.name)
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                
+                                Text(card.cardType.displayName)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            if !card.isActive {
+                                Text("Inactive")
+                                    .font(.caption)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.gray)
+                                    .foregroundColor(.white)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                        
+                        Divider()
+                    }
+                    .padding(.horizontal)
                     
                     // Reward Categories
-                    rewardCategoriesSection
-                    
-                    // Spending Limits
-                    spendingLimitsSection
+                    if !card.rewardCategories.isEmpty {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Reward Categories")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ], spacing: 12) {
+                                ForEach(card.rewardCategories) { category in
+                                    RewardCategoryCard(category: category)
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
                     
                     // Quarterly Bonus
                     if let quarterlyBonus = card.quarterlyBonus {
-                        quarterlyBonusSection(quarterlyBonus)
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Quarterly Bonus (Q\(quarterlyBonus.quarter) \(quarterlyBonus.year))")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Image(systemName: quarterlyBonus.category.icon)
+                                        .foregroundColor(.orange)
+                                        .font(.title2)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(quarterlyBonus.category.displayName)
+                                            .font(.subheadline)
+                                            .fontWeight(.semibold)
+                                        
+                                        Text("\(quarterlyBonus.multiplier, specifier: "%.1f")x \(quarterlyBonus.pointType.displayName)")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    VStack(alignment: .trailing, spacing: 4) {
+                                        Text("\(quarterlyBonus.currentSpending.asCurrency) / \(quarterlyBonus.limit.asCurrency)")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                        
+                                        Text("\(Int((quarterlyBonus.currentSpending / quarterlyBonus.limit) * 100))% used")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                
+                                ProgressView(value: quarterlyBonus.currentSpending, total: quarterlyBonus.limit)
+                                    .progressViewStyle(LinearProgressViewStyle(tint: quarterlyBonus.currentSpending >= quarterlyBonus.limit ? .red : .orange))
+                                
+                                if quarterlyBonus.currentSpending >= quarterlyBonus.limit {
+                                    HStack {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .foregroundColor(.red)
+                                        Text("Quarterly limit reached")
+                                            .font(.caption)
+                                            .foregroundColor(.red)
+                                    }
+                                } else if (quarterlyBonus.currentSpending / quarterlyBonus.limit) >= 0.85 {
+                                    HStack {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .foregroundColor(.orange)
+                                        Text("Approaching quarterly limit")
+                                            .font(.caption)
+                                            .foregroundColor(.orange)
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                            .padding(.horizontal)
+                        }
+                    }
+                    
+                    // Spending Limits
+                    if !card.spendingLimits.isEmpty {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Spending Progress")
+                                .font(.headline)
+                                .padding(.horizontal)
+                            
+                            VStack(spacing: 12) {
+                                ForEach(card.spendingLimits) { limit in
+                                    SpendingLimitCard(limit: limit)
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                    
+                    // Card Statistics
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Card Information")
+                            .font(.headline)
+                            .padding(.horizontal)
+                        
+                        VStack(spacing: 12) {
+                            InfoRow(label: "Added", value: DateFormatter.shortDate.string(from: card.createdAt))
+                            InfoRow(label: "Last Updated", value: DateFormatter.shortDate.string(from: card.updatedAt))
+                            InfoRow(label: "Status", value: card.isActive ? "Active" : "Inactive")
+                            InfoRow(label: "Reward Categories", value: "\(card.rewardCategories.count)")
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                        .padding(.horizontal)
                     }
                 }
-                .padding()
+                .padding(.vertical)
             }
-            .navigationTitle(card.name)
+            .navigationTitle("Card Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -41,143 +172,16 @@ struct CardDetailView: View {
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(isEditing ? "Save" : "Edit") {
-                        if isEditing {
-                            saveChanges()
-                        } else {
-                            isEditing = true
-                        }
+                    Button("Edit") {
+                        showingEditCard = true
                     }
                 }
             }
-        }
-    }
-    
-    private var cardHeader: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "creditcard.fill")
-                .font(.system(size: 60))
-                .foregroundColor(.blue)
-            
-            VStack(spacing: 4) {
-                Text(card.name)
-                    .font(.title2)
-                    .fontWeight(.bold)
-                
-                Text(card.cardType.displayName)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                if !card.isActive {
-                    Text("Inactive")
-                        .font(.caption)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
-                        .background(Color.gray)
-                        .foregroundColor(.white)
-                        .clipShape(Capsule())
-                }
+            .sheet(isPresented: $showingEditCard) {
+                // TODO: Pass card to AddCardView for editing
+                AddCardView()
             }
         }
-        .padding()
-        .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-    
-    private var rewardCategoriesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Reward Categories")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 12) {
-                ForEach(card.rewardCategories) { category in
-                    RewardCategoryCard(category: category)
-                }
-            }
-        }
-    }
-    
-    private var spendingLimitsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Spending Limits")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            ForEach(card.spendingLimits) { limit in
-                SpendingLimitCard(limit: limit, isEditing: isEditing) { newAmount in
-                    updateSpendingLimit(limit, newAmount: newAmount)
-                }
-            }
-        }
-    }
-    
-    private func quarterlyBonusSection(_ bonus: QuarterlyBonus) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Quarterly Bonus")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            VStack(spacing: 8) {
-                HStack {
-                    Image(systemName: bonus.category.icon)
-                        .foregroundColor(.blue)
-                    
-                    Text(bonus.category.displayName)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    Spacer()
-                    
-                    Text("Q\(bonus.quarter)")
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .clipShape(Capsule())
-                }
-                
-                HStack {
-                    Text("\(bonus.multiplier, specifier: "%.1f")x")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.blue)
-                    
-                    Text(bonus.pointType.rawValue)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    Text("$\(bonus.currentSpending, specifier: "%.0f")/$\(bonus.limit, specifier: "%.0f")")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                
-                ProgressView(value: bonus.currentSpending, total: bonus.limit)
-                    .progressViewStyle(LinearProgressViewStyle(tint: bonus.currentSpending >= bonus.limit ? .red : .blue))
-            }
-            .padding()
-            .background(Color(.systemGray6))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-    }
-    
-    private func updateSpendingLimit(_ limit: SpendingLimit, newAmount: Double) {
-        // Update the spending limit
-        if let index = editedCard.spendingLimits.firstIndex(where: { $0.id == limit.id }) {
-            editedCard.spendingLimits[index].currentSpending = newAmount
-        }
-    }
-    
-    private func saveChanges() {
-        // Save the edited card
-        // This would typically call the data manager to update the card
-        isEditing = false
     }
 }
 
@@ -185,127 +189,128 @@ struct RewardCategoryCard: View {
     let category: RewardCategory
     
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: category.category.icon)
-                .font(.title2)
-                .foregroundColor(.blue)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: category.category.icon)
+                    .foregroundColor(.blue)
+                    .font(.title3)
+                
+                Spacer()
+                
+                Text("\(category.multiplier, specifier: "%.1f")x")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.blue)
+            }
             
             Text(category.category.displayName)
-                .font(.caption)
-                .fontWeight(.medium)
-                .multilineTextAlignment(.center)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .lineLimit(2)
             
-            Text("\(category.multiplier, specifier: "%.1f")x")
-                .font(.headline)
-                .fontWeight(.bold)
-                .foregroundColor(.blue)
-            
-            Text(category.pointType.rawValue)
+            Text(category.pointType.displayName)
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-        .padding()
+        .padding(12)
         .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .cornerRadius(12)
     }
 }
 
 struct SpendingLimitCard: View {
     let limit: SpendingLimit
-    let isEditing: Bool
-    let onUpdate: (Double) -> Void
-    
-    @State private var editingAmount: Double
-    
-    init(limit: SpendingLimit, isEditing: Bool, onUpdate: @escaping (Double) -> Void) {
-        self.limit = limit
-        self.isEditing = isEditing
-        self.onUpdate = onUpdate
-        self._editingAmount = State(initialValue: limit.currentSpending)
-    }
     
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: limit.category.icon)
                     .foregroundColor(.blue)
+                    .font(.title3)
                 
-                Text(limit.category.displayName)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(limit.category.displayName)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    
+                    Text("Resets \(limit.resetType.displayName.lowercased())")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
                 
                 Spacer()
                 
-                if limit.isLimitReached {
-                    Text("Limit Reached")
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(limit.currentSpending.asCurrency) / \(limit.limit.asCurrency)")
                         .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.red)
-                        .foregroundColor(.white)
-                        .clipShape(Capsule())
-                } else if limit.isWarningThreshold {
-                    Text("Warning")
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.orange)
-                        .foregroundColor(.white)
-                        .clipShape(Capsule())
-                }
-            }
-            
-            if isEditing {
-                HStack {
-                    Text("Current:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .fontWeight(.semibold)
                     
-                    TextField("Amount", value: $editingAmount, format: .currency(code: "USD"))
-                        .textFieldStyle(.roundedBorder)
-                        .keyboardType(.decimalPad)
-                        .onChange(of: editingAmount) { newValue in
-                            onUpdate(newValue)
-                        }
-                }
-            } else {
-                HStack {
-                    Text("$\(limit.currentSpending, specifier: "%.0f")")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    Text("/")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    Text("$\(limit.limit, specifier: "%.0f")")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    Text("\(Int(limit.usagePercentage * 100))%")
+                    Text("\(Int(limit.usagePercentage * 100))% used")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
             
             ProgressView(value: limit.currentSpending, total: limit.limit)
-                .progressViewStyle(LinearProgressViewStyle(tint: limit.isWarningThreshold ? .orange : .blue))
+                .progressViewStyle(LinearProgressViewStyle(tint: limit.isLimitReached ? .red : (limit.isWarningThreshold ? .orange : .blue)))
+            
+            if limit.isLimitReached {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.red)
+                    Text("Spending limit reached")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
+            } else if limit.isWarningThreshold {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                    Text("Approaching spending limit")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+            }
         }
         .padding()
         .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .cornerRadius(12)
     }
+}
+
+struct InfoRow: View {
+    let label: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            Spacer()
+            
+            Text(value)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+        }
+    }
+}
+
+extension DateFormatter {
+    static let shortDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        return formatter
+    }()
 }
 
 #Preview {
     CardDetailView(card: CreditCard(
-        name: "Amex Gold",
+        name: "Sample Card",
         cardType: .amexGold,
-        spendingLimits: [
-            SpendingLimit(category: .groceries, limit: 25000, currentSpending: 800),
-            SpendingLimit(category: .dining, limit: 25000, currentSpending: 1200)
+        rewardCategories: [
+            RewardCategory(category: .groceries, multiplier: 4.0, pointType: .membershipRewards)
         ]
     ))
-} 
+}

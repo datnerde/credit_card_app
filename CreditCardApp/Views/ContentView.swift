@@ -48,39 +48,25 @@ struct ContentView: View {
     
     var body: some View {
         TabView {
-            // Simple text views for now to avoid ViewModelFactory issues
-            VStack {
-                Text("Chat View")
-                    .font(.title)
-                Text("Chat interface will be here")
-                    .foregroundColor(.secondary)
-            }
-            .tabItem {
-                Image(systemName: "message.fill")
-                Text("Chat")
-            }
+            ChatView()
+                .tabItem {
+                    Image(systemName: "message.fill")
+                    Text("Chat")
+                }
             
-            VStack {
-                Text("My Cards")
-                    .font(.title)
-                Text("Card management will be here")
-                    .foregroundColor(.secondary)
-            }
-            .tabItem {
-                Image(systemName: "creditcard.fill")
-                Text("My Cards")
-            }
+            CardListView()
+                .environmentObject(serviceContainer)
+                .tabItem {
+                    Image(systemName: "creditcard.fill")
+                    Text("My Cards")
+                }
             
-            VStack {
-                Text("Settings")
-                    .font(.title)
-                Text("App settings will be here")
-                    .foregroundColor(.secondary)
-            }
-            .tabItem {
-                Image(systemName: "gear")
-                Text("Settings")
-            }
+            SettingsView()
+                .environmentObject(serviceContainer)
+                .tabItem {
+                    Image(systemName: "gear")
+                    Text("Settings")
+                }
         }
         .accentColor(.blue)
         .onAppear {

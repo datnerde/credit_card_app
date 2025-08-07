@@ -110,7 +110,7 @@ class NotificationService: ObservableObject {
     // MARK: - Quarterly Bonus Reminders
     
     func checkQuarterlyBonusReminders(for cards: [CreditCard]) {
-        let currentQuarter = Calendar.current.component(.quarter, from: Date())
+        let currentQuarter = Calendar.currentQuarter
         let currentYear = Calendar.current.component(.year, from: Date())
         
         for card in cards {

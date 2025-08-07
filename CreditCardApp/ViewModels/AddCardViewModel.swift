@@ -42,6 +42,22 @@ class AddCardViewModel: BaseViewModelImpl {
     
     // MARK: - New Methods for Enhanced UI
     
+    func loadCard(_ card: CreditCard) {
+        setupForEditing(card)
+    }
+    
+    func loadDefaultsForCardType() {
+        // Load default reward categories for the selected card type
+        let defaultRewards = selectedCardType.defaultRewards
+        for reward in defaultRewards {
+            selectedCategories.insert(reward.category)
+            categoryMultipliers[reward.category] = reward.multiplier
+            categoryPointTypes[reward.category] = reward.pointType
+        }
+        updateLegacyProperties()
+        validateForm()
+    }
+    
     func toggleCategory(_ category: SpendingCategory, isSelected: Bool) {
         if isSelected {
             selectedCategories.insert(category)
@@ -400,13 +416,13 @@ class AddCardViewModel: BaseViewModelImpl {
         case .monthly:
             return calendar.date(byAdding: .month, value: 1, to: now) ?? now
         case .quarterly:
-            let currentQuarter = calendar.component(.quarter, from: now)
+            let currentQuarter = Calendar.currentQuarter
             let nextQuarter = currentQuarter == 4 ? 1 : currentQuarter + 1
             let nextQuarterYear = currentQuarter == 4 ? calendar.component(.year, from: now) + 1 : calendar.component(.year, from: now)
             
             var components = DateComponents()
             components.year = nextQuarterYear
-            components.quarter = nextQuarter
+            components.month = (nextQuarter - 1) * 3 + 1 // Convert quarter to first month of quarter
             components.day = 1
             
             return calendar.date(from: components) ?? now

@@ -277,4 +277,18 @@ extension Double {
             return "\(self.asStringWithDecimals)x"
         }
     }
+}
+
+// MARK: - Calendar Extensions
+
+extension Calendar {
+    static var currentQuarter: Int {
+        let month = Calendar.current.component(.month, from: Date())
+        return ((month - 1) / 3) + 1
+    }
+    
+    func quarter(for date: Date) -> Int {
+        let month = self.component(.month, from: date)
+        return ((month - 1) / 3) + 1
+    }
 } 

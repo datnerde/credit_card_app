@@ -2,23 +2,29 @@ import SwiftUI
 import Foundation
 
 struct CardListView: View {
-    @StateObject private var viewModel = ViewModelFactory.makeCardListViewModel()
+    @EnvironmentObject var serviceContainer: AppServiceContainer
+    @State private var viewModel: CardListViewModel?
     @State private var showingAddCard = false
+    @State private var isLoading = true
     
     var body: some View {
         NavigationView {
             Group {
-                if viewModel.isLoading {
-                    LoadingView()
-                } else if viewModel.cards.isEmpty {
-                    EmptyStateView(
-                        title: "No Cards Added",
-                        message: "Add your credit cards to get personalized recommendations",
-                        buttonTitle: "Add Card",
-                        action: { showingAddCard = true }
-                    )
+                if let viewModel = viewModel {
+                    if viewModel.isLoading {
+                        LoadingView()
+                    } else if viewModel.cards.isEmpty {
+                        EmptyStateView(
+                            title: "No Cards Added",
+                            message: "Add your credit cards to get personalized recommendations",
+                            buttonTitle: "Add Card",
+                            action: { showingAddCard = true }
+                        )
+                    } else {
+                        cardList(viewModel: viewModel)
+                    }
                 } else {
-                    cardList
+                    LoadingView()
                 }
             }
             .navigationTitle("My Cards")
@@ -29,28 +35,38 @@ struct CardListView: View {
                     }
                 }
             }
+            .onAppear {
+                if viewModel == nil {
+                    // Safely initialize the ViewModel using the service container
+                    viewModel = CardListViewModel(
+                        dataManager: serviceContainer.dataManager,
+                        analyticsService: serviceContainer.analyticsService
+                    )
+                }
+            }
             .sheet(isPresented: $showingAddCard) {
                 AddCardView()
             }
-            .sheet(item: $viewModel.selectedCard) { (card: CreditCard) in
+            .sheet(item: Binding(
+                get: { viewModel?.selectedCard },
+                set: { viewModel?.selectedCard = $0 }
+            )) { (card: CreditCard) in
                 CardDetailView(card: card)
             }
         }
-        .onAppear {
-            viewModel.loadCards()
-        }
-        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+        .alert("Error", isPresented: Binding(
+            get: { viewModel?.errorMessage != nil },
+            set: { _ in }
+        )) {
             Button("OK") {
-                viewModel.clearError()
+                viewModel?.clearError()
             }
         } message: {
-            if let errorMessage = viewModel.errorMessage {
-                Text(errorMessage)
-            }
+            Text(viewModel?.errorMessage ?? "")
         }
     }
     
-    private var cardList: some View {
+    private func cardList(viewModel: CardListViewModel) -> some View {
         List {
             ForEach(viewModel.cards) { card in
                 CardRowView(card: card) {
@@ -210,55 +226,6 @@ struct CardRowView: View {
     }
 }
 
-struct LoadingView: View {
-    var body: some View {
-        VStack {
-            ProgressView()
-                .scaleEffect(1.5)
-            Text("Loading cards...")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .padding(.top)
-        }
-    }
-}
-
-struct EmptyStateView: View {
-    let title: String
-    let message: String
-    let buttonTitle: String
-    let action: () -> Void
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "creditcard")
-                .font(.system(size: 60))
-                .foregroundColor(.gray)
-            
-            VStack(spacing: 8) {
-                Text(title)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Text(message)
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            
-            Button(action: action) {
-                Text(buttonTitle)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(Color.blue)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-        }
-        .padding()
-    }
-}
 
 #Preview {
     CardListView()

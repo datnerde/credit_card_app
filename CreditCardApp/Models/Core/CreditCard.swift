@@ -68,7 +68,7 @@ struct QuarterlyBonus: Codable {
          pointType: PointType, 
          limit: Double, 
          currentSpending: Double = 0.0, 
-         quarter: Int = Calendar.current.component(.quarter, from: Date()), 
+         quarter: Int = Calendar.currentQuarter, 
          year: Int = Calendar.current.component(.year, from: Date())) {
         self.category = category
         self.multiplier = multiplier

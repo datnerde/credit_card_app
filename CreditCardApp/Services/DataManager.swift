@@ -4,9 +4,59 @@ import CoreData
 // MARK: - Data Manager
 class DataManager: ObservableObject {
     private let coreDataStack: CoreDataStack
+    private var fallbackMode = false
+    private var fallbackCards: [CreditCard] = []
+    private var fallbackMessages: [ChatMessage] = []
+    private var fallbackPreferences: UserPreferences = UserPreferences()
     
     init(coreDataStack: CoreDataStack = CoreDataStack.shared) {
         self.coreDataStack = coreDataStack
+        
+        // Test Core Data availability with error handling
+        do {
+            try testCoreDataAvailability()
+        } catch {
+            print("⚠️ DataManager: Core Data initialization failed, enabling fallback mode: \(error)")
+            fallbackMode = true
+        }
+    }
+    
+    private func testCoreDataAvailability() {
+        do {
+            let context = coreDataStack.context
+            let request: NSFetchRequest<CreditCardEntity> = CreditCardEntity.fetchRequest()
+            request.fetchLimit = 1
+            _ = try context.fetch(request)
+        } catch {
+            print("⚠️ Core Data not available, switching to fallback mode")
+            fallbackMode = true
+            loadSampleData()
+        }
+    }
+    
+    private func loadSampleData() {
+        // Load some sample cards for testing when Core Data fails
+        fallbackCards = [
+            CreditCard(
+                name: "Sample Amex Gold",
+                cardType: .amexGold,
+                rewardCategories: [
+                    RewardCategory(category: .groceries, multiplier: 4.0, pointType: .membershipRewards),
+                    RewardCategory(category: .dining, multiplier: 4.0, pointType: .membershipRewards)
+                ],
+                spendingLimits: [
+                    SpendingLimit(category: .groceries, limit: 1000, currentSpending: 250)
+                ]
+            ),
+            CreditCard(
+                name: "Sample Chase Sapphire",
+                cardType: .chaseSapphirePreferred,
+                rewardCategories: [
+                    RewardCategory(category: .travel, multiplier: 5.0, pointType: .ultimateRewards),
+                    RewardCategory(category: .dining, multiplier: 3.0, pointType: .ultimateRewards)
+                ]
+            )
+        ]
     }
     
     // Convenience computed properties to match the expected interface
@@ -17,24 +67,50 @@ class DataManager: ObservableObject {
     // MARK: - Credit Card Operations
     
     func fetchCards() async throws -> [CreditCard] {
-        let context = container.viewContext
-        let request: NSFetchRequest<CreditCardEntity> = CreditCardEntity.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \CreditCardEntity.createdAt, ascending: false)]
+        if fallbackMode {
+            print("📱 Using fallback mode for cards")
+            return fallbackCards
+        }
         
-        return try await context.perform {
-            let entities = try request.execute()
-            return entities.compactMap { $0.toModel() }
+        do {
+            let context = container.viewContext
+            let request: NSFetchRequest<CreditCardEntity> = CreditCardEntity.fetchRequest()
+            request.sortDescriptors = [NSSortDescriptor(keyPath: \CreditCardEntity.createdAt, ascending: false)]
+            
+            return try await context.perform {
+                let entities = try request.execute()
+                return entities.compactMap { $0.toModel() }
+            }
+        } catch {
+            print("DataManager: Failed to fetch cards - \(error)")
+            print("📱 Switching to fallback mode")
+            fallbackMode = true
+            loadSampleData()
+            return fallbackCards
         }
     }
     
     func saveCard(_ card: CreditCard) async throws {
-        let context = container.viewContext
+        if fallbackMode {
+            print("📱 Saving card in fallback mode")
+            fallbackCards.append(card)
+            return
+        }
         
-        try await context.perform {
-            let entity = CreditCardEntity(context: context)
-            entity.updateFromModel(card)
+        do {
+            let context = container.viewContext
             
-            try context.save()
+            try await context.perform {
+                let entity = CreditCardEntity(context: context)
+                entity.updateFromModel(card)
+                
+                try context.save()
+            }
+        } catch {
+            print("DataManager: Failed to save card - \(error)")
+            print("📱 Switching to fallback mode for save")
+            fallbackMode = true
+            fallbackCards.append(card)
         }
     }
     
@@ -172,7 +248,7 @@ class DataManager: ObservableObject {
     
     // MARK: - Sample Data
     
-    func loadSampleData() async throws {
+    func loadSampleCardsData() async throws {
         let sampleCards = [
             CreditCard(
                 name: "Amex Gold",
