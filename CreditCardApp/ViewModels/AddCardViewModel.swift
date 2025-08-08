@@ -29,7 +29,7 @@ class AddCardViewModel: BaseViewModelImpl {
     @Published var isFormValid: Bool = false
     @Published var validationErrors: [String] = []
     
-    private let dataManager: DataManager
+    private var dataManager: DataManager
     private var cancellables = Set<AnyCancellable>()
     
     init(dataManager: DataManager, analyticsService: AnalyticsService) {
@@ -42,22 +42,45 @@ class AddCardViewModel: BaseViewModelImpl {
     
     // MARK: - New Methods for Enhanced UI
     
+    func updateDataManager(_ newDataManager: DataManager) {
+        self.dataManager = newDataManager
+    }
+    
+    @MainActor
     func loadCard(_ card: CreditCard) {
         setupForEditing(card)
     }
     
+    @MainActor
     func loadDefaultsForCardType() {
+        print("🔧 Loading defaults for card type: \(selectedCardType)")
         // Load default reward categories for the selected card type
-        let defaultRewards = selectedCardType.defaultRewards
+        var defaultRewards = selectedCardType.defaultRewards
+        
+        // For custom cards, provide some sensible defaults
+        if selectedCardType == .custom && defaultRewards.isEmpty {
+            defaultRewards = [
+                RewardCategory(category: .general, multiplier: 1.0, pointType: .cashBack),
+                RewardCategory(category: .dining, multiplier: 2.0, pointType: .cashBack),
+                RewardCategory(category: .groceries, multiplier: 2.0, pointType: .cashBack)
+            ]
+            print("🔧 Using default rewards for custom card")
+        }
+        
+        print("🔧 Default rewards found: \(defaultRewards.count)")
         for reward in defaultRewards {
+            print("🔧 Adding category: \(reward.category) with multiplier: \(reward.multiplier)")
             selectedCategories.insert(reward.category)
             categoryMultipliers[reward.category] = reward.multiplier
             categoryPointTypes[reward.category] = reward.pointType
         }
+        print("🔧 Selected categories after loading: \(selectedCategories)")
         updateLegacyProperties()
         validateForm()
+        print("🔧 Form valid after loading defaults: \(isFormValid)")
     }
     
+    @MainActor
     func toggleCategory(_ category: SpendingCategory, isSelected: Bool) {
         if isSelected {
             selectedCategories.insert(category)
@@ -77,12 +100,14 @@ class AddCardViewModel: BaseViewModelImpl {
         validateForm()
     }
     
+    @MainActor
     func updateMultiplier(_ category: SpendingCategory, multiplier: Double) {
         categoryMultipliers[category] = multiplier
         updateLegacyProperties()
         validateForm()
     }
     
+    @MainActor
     func updatePointType(_ category: SpendingCategory, pointType: PointType) {
         categoryPointTypes[category] = pointType
         updateLegacyProperties()
@@ -128,6 +153,7 @@ class AddCardViewModel: BaseViewModelImpl {
     
     // MARK: - Public Methods
     
+    @MainActor
     func setupForEditing(_ card: CreditCard) {
         editingCard = card
         isEditing = true
@@ -146,14 +172,23 @@ class AddCardViewModel: BaseViewModelImpl {
         validateForm()
     }
     
+    @MainActor
     func saveCard() async {
-        guard isFormValid else { return }
+        print("💾 AddCardViewModel.saveCard() called. Form valid: \(isFormValid)")
+        guard isFormValid else { 
+            print("❌ Form is not valid, aborting save")
+            return 
+        }
+        
+        setLoading(true)
         
         do {
             updateLegacyProperties() // Ensure legacy properties are up to date
             let card = createCardFromForm()
+            print("💾 Created card from form: \(card.name) (ID: \(card.id))")
             
             if isEditing {
+                print("💾 Updating existing card")
                 try await dataManager.updateCard(card)
                 
                 // Track card update
@@ -165,7 +200,9 @@ class AddCardViewModel: BaseViewModelImpl {
                 ])
                 analyticsService?.trackEvent(event)
             } else {
+                print("💾 Saving new card to DataManager")
                 try await dataManager.saveCard(card)
+                print("✅ Card saved successfully to DataManager")
                 
                 // Track card addition
                 let event = AnalyticsEvent(name: "card_added", properties: [
@@ -176,17 +213,18 @@ class AddCardViewModel: BaseViewModelImpl {
                 analyticsService?.trackEvent(event)
             }
             
-            await MainActor.run {
-                resetForm()
-            }
+            resetForm()
+            setLoading(false)
+            print("✅ AddCardViewModel.saveCard() completed successfully")
             
         } catch {
-            await MainActor.run {
-                handleError(error)
-            }
+            print("❌ Error in AddCardViewModel.saveCard(): \(error)")
+            handleError(error)
+            setLoading(false)
         }
     }
     
+    @MainActor
     func resetForm() {
         cardName = ""
         selectedCardType = .custom
@@ -313,8 +351,8 @@ class AddCardViewModel: BaseViewModelImpl {
             validationErrors.append("Card name is required")
         }
         
-        // Validate reward categories
-        if selectedCategories.isEmpty && selectedRewardCategories.isEmpty {
+        // Validate reward categories (not required for custom cards as they can define them later)
+        if selectedCategories.isEmpty && selectedRewardCategories.isEmpty && selectedCardType != .custom {
             validationErrors.append("At least one reward category is required")
         }
         
@@ -335,7 +373,21 @@ class AddCardViewModel: BaseViewModelImpl {
             }
         }
         
-        isFormValid = validationErrors.isEmpty && !cardName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && (!selectedCategories.isEmpty || !selectedRewardCategories.isEmpty)
+        let hasValidName = !cardName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasCategories = !selectedCategories.isEmpty || !selectedRewardCategories.isEmpty
+        let noValidationErrors = validationErrors.isEmpty
+        
+        // For custom cards, we allow saving without predefined categories (they can define them later)
+        let isCustomCard = selectedCardType == .custom
+        let categoryValidation = isCustomCard || hasCategories
+        
+        print("🔍 Form validation - Name valid: \(hasValidName), Has categories: \(hasCategories), No errors: \(noValidationErrors), Is custom: \(isCustomCard)")
+        print("🔍 Card name: '\(cardName)' (trimmed: '\(cardName.trimmingCharacters(in: .whitespacesAndNewlines))')")
+        print("🔍 Selected categories: \(selectedCategories)")
+        print("🔍 Selected reward categories: \(selectedRewardCategories)")
+        print("🔍 Validation errors: \(validationErrors)")
+        
+        isFormValid = noValidationErrors && hasValidName && categoryValidation
     }
     
     private func createCardFromForm() -> CreditCard {
@@ -500,6 +552,7 @@ class AddCardViewModel: BaseViewModelImpl {
 // MARK: - AddCardViewModel Extensions
 
 extension AddCardViewModel {
+    @MainActor
     func duplicateCard(_ card: CreditCard) {
         setupForEditing(card)
         cardName = "\(card.name) (Copy)"

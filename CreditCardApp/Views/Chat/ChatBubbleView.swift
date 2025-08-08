@@ -28,7 +28,7 @@ struct ChatBubbleView: View {
             
             if let recommendations = message.cardRecommendations, !recommendations.isEmpty {
                 VStack(alignment: .trailing, spacing: 8) {
-                    ForEach(recommendations) { recommendation in
+                    ForEach(recommendations, id: \.id) { recommendation in
                         CardRecommendationView(recommendation: recommendation)
                     }
                 }
@@ -54,7 +54,7 @@ struct ChatBubbleView: View {
                     
                     if let recommendations = message.cardRecommendations, !recommendations.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            ForEach(recommendations) { recommendation in
+                            ForEach(recommendations, id: \.id) { recommendation in
                                 CardRecommendationView(recommendation: recommendation)
                             }
                         }
@@ -120,7 +120,10 @@ struct CardRecommendationView: View {
                         .foregroundColor(.white)
                         .clipShape(Capsule())
                 } else if recommendation.limit > 0 {
-                    ProgressView(value: recommendation.currentSpending, total: recommendation.limit)
+                    ProgressView(
+                        value: max(0, recommendation.currentSpending), 
+                        total: max(1, recommendation.limit)
+                    )
                         .progressViewStyle(LinearProgressViewStyle(tint: .blue))
                         .frame(width: 60)
                 }
@@ -167,7 +170,7 @@ struct TypingIndicatorView: View {
                 .font(.title2)
             
             HStack(spacing: 4) {
-                ForEach(0..<3) { index in
+                ForEach(0..<3, id: \.self) { index in
                     Circle()
                         .fill(Color.gray)
                         .frame(width: 8, height: 8)

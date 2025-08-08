@@ -25,7 +25,17 @@ class ServiceContainer: ObservableObject {
     private func loadSampleDataIfNeeded() {
         Task {
             do {
-                try await dataManager.loadSampleCardsData()
+                // First, remove any duplicate cards
+                try await dataManager.removeDuplicateCards()
+                
+                // Then check if we need to load sample data
+                let existingCards = try await dataManager.fetchCards()
+                if existingCards.isEmpty {
+                    print("🚀 Loading sample data - no existing cards found")
+                    try await dataManager.loadSampleCardsData()
+                } else {
+                    print("🚀 Skipping sample data load - found \(existingCards.count) existing cards")
+                }
             } catch {
                 print("Failed to load sample data: \(error)")
             }

@@ -35,25 +35,28 @@ class DataManager: ObservableObject {
     }
     
     private func loadSampleData() {
-        // Load some sample cards for testing when Core Data fails
+        // Use the same sample data as the regular sample data for consistency
         fallbackCards = [
             CreditCard(
-                name: "Sample Amex Gold",
+                name: "Amex Gold",
                 cardType: .amexGold,
-                rewardCategories: [
-                    RewardCategory(category: .groceries, multiplier: 4.0, pointType: .membershipRewards),
-                    RewardCategory(category: .dining, multiplier: 4.0, pointType: .membershipRewards)
-                ],
                 spendingLimits: [
-                    SpendingLimit(category: .groceries, limit: 1000, currentSpending: 250)
+                    SpendingLimit(category: .groceries, limit: 25000, currentSpending: 800),
+                    SpendingLimit(category: .dining, limit: 25000, currentSpending: 1200)
                 ]
             ),
             CreditCard(
-                name: "Sample Chase Sapphire",
-                cardType: .chaseSapphirePreferred,
-                rewardCategories: [
-                    RewardCategory(category: .travel, multiplier: 5.0, pointType: .ultimateRewards),
-                    RewardCategory(category: .dining, multiplier: 3.0, pointType: .ultimateRewards)
+                name: "Chase Freedom",
+                cardType: .chaseFreedom,
+                quarterlyBonus: QuarterlyBonus(
+                    category: .gas,
+                    multiplier: 5.0,
+                    pointType: .ultimateRewards,
+                    limit: 1500,
+                    currentSpending: 1500
+                ),
+                spendingLimits: [
+                    SpendingLimit(category: .gas, limit: 1500, currentSpending: 1500)
                 ]
             )
         ]
@@ -115,34 +118,64 @@ class DataManager: ObservableObject {
     }
     
     func updateCard(_ card: CreditCard) async throws {
-        let context = container.viewContext
-        let request: NSFetchRequest<CreditCardEntity> = CreditCardEntity.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", card.id as CVarArg)
-        
-        try await context.perform {
-            let entities = try request.execute()
-            guard let entity = entities.first else {
-                throw DataManagerError.cardNotFound
+        if fallbackMode {
+            print("📱 Updating card in fallback mode: \(card.name)")
+            if let index = fallbackCards.firstIndex(where: { $0.id == card.id }) {
+                fallbackCards[index] = card
             }
+            return
+        }
+        
+        do {
+            let context = container.viewContext
+            let request: NSFetchRequest<CreditCardEntity> = CreditCardEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "id == %@", card.id as CVarArg)
             
-            entity.updateFromModel(card)
-            try context.save()
+            try await context.perform {
+                let entities = try request.execute()
+                guard let entity = entities.first else {
+                    throw DataManagerError.cardNotFound
+                }
+                
+                entity.updateFromModel(card)
+                try context.save()
+            }
+        } catch {
+            print("DataManager: Failed to update card - \(error)")
+            print("📱 Switching to fallback mode for update")
+            fallbackMode = true
+            if let index = fallbackCards.firstIndex(where: { $0.id == card.id }) {
+                fallbackCards[index] = card
+            }
         }
     }
     
     func deleteCard(_ card: CreditCard) async throws {
-        let context = container.viewContext
-        let request: NSFetchRequest<CreditCardEntity> = CreditCardEntity.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", card.id as CVarArg)
+        if fallbackMode {
+            print("📱 Deleting card in fallback mode: \(card.name)")
+            fallbackCards.removeAll { $0.id == card.id }
+            return
+        }
         
-        try await context.perform {
-            let entities = try request.execute()
-            guard let entity = entities.first else {
-                throw DataManagerError.cardNotFound
-            }
+        do {
+            let context = container.viewContext
+            let request: NSFetchRequest<CreditCardEntity> = CreditCardEntity.fetchRequest()
+            request.predicate = NSPredicate(format: "id == %@", card.id as CVarArg)
             
-            context.delete(entity)
-            try context.save()
+            try await context.perform {
+                let entities = try request.execute()
+                guard let entity = entities.first else {
+                    throw DataManagerError.cardNotFound
+                }
+                
+                context.delete(entity)
+                try context.save()
+            }
+        } catch {
+            print("DataManager: Failed to delete card - \(error)")
+            print("📱 Switching to fallback mode for delete")
+            fallbackMode = true
+            fallbackCards.removeAll { $0.id == card.id }
         }
     }
     
@@ -246,9 +279,76 @@ class DataManager: ObservableObject {
         }
     }
     
+    // MARK: - Data Cleanup
+    
+    func removeDuplicateCards() async throws {
+        print("🧹 Checking for duplicate cards...")
+        if fallbackMode {
+            var uniqueCards: [CreditCard] = []
+            var seenNames: Set<String> = []
+            
+            for card in fallbackCards {
+                if !seenNames.contains(card.name) {
+                    seenNames.insert(card.name)
+                    uniqueCards.append(card)
+                } else {
+                    print("🧹 Removing duplicate fallback card: \(card.name)")
+                }
+            }
+            fallbackCards = uniqueCards
+            return
+        }
+        
+        do {
+            let context = container.viewContext
+            let request: NSFetchRequest<CreditCardEntity> = CreditCardEntity.fetchRequest()
+            request.sortDescriptors = [NSSortDescriptor(keyPath: \CreditCardEntity.createdAt, ascending: true)]
+            
+            try await context.perform {
+                let entities = try request.execute()
+                var seenNames: Set<String> = []
+                var duplicatesToDelete: [CreditCardEntity] = []
+                
+                for entity in entities {
+                    let cardName = entity.name ?? ""
+                    if !seenNames.contains(cardName) {
+                        seenNames.insert(cardName)
+                    } else {
+                        print("🧹 Found duplicate card to delete: \(cardName)")
+                        duplicatesToDelete.append(entity)
+                    }
+                }
+                
+                // Delete duplicates
+                for duplicate in duplicatesToDelete {
+                    context.delete(duplicate)
+                    let name = duplicate.name ?? "Unknown"
+                    print("🧹 Deleted duplicate card: \(name)")
+                }
+                
+                if !duplicatesToDelete.isEmpty {
+                    try context.save()
+                    print("🧹 Removed \(duplicatesToDelete.count) duplicate cards")
+                } else {
+                    print("🧹 No duplicate cards found")
+                }
+            }
+        } catch {
+            print("❌ Error removing duplicate cards: \(error)")
+            throw error
+        }
+    }
+    
     // MARK: - Sample Data
     
     func loadSampleCardsData() async throws {
+        print("🎯 Starting to load sample cards data")
+        
+        // Check existing cards first to avoid duplicates
+        let existingCards = try await fetchCards()
+        let existingNames = Set(existingCards.map { $0.name })
+        print("🎯 Found existing cards: \(existingNames)")
+        
         let sampleCards = [
             CreditCard(
                 name: "Amex Gold",
@@ -271,19 +371,20 @@ class DataManager: ObservableObject {
                 spendingLimits: [
                     SpendingLimit(category: .gas, limit: 1500, currentSpending: 1500)
                 ]
-            ),
-            CreditCard(
-                name: "Chase Sapphire Reserve",
-                cardType: .chaseSapphireReserve,
-                spendingLimits: [
-                    SpendingLimit(category: .travel, limit: 3000, currentSpending: 2000)
-                ]
             )
         ]
         
+        // Only add cards that don't already exist
         for card in sampleCards {
-            try await saveCard(card)
+            if !existingNames.contains(card.name) {
+                print("🎯 Adding sample card: \(card.name)")
+                try await saveCard(card)
+            } else {
+                print("🎯 Skipping existing card: \(card.name)")
+            }
         }
+        
+        print("🎯 Sample cards loading completed")
     }
 }
 

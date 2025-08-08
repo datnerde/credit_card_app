@@ -12,6 +12,7 @@ class ViewModelFactory {
         )
     }
     
+    @MainActor
     static func makeCardListViewModel() -> CardListViewModel {
         return CardListViewModel(
             dataManager: serviceContainer.dataManager,

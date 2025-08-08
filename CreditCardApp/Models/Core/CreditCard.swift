@@ -104,8 +104,9 @@ struct SpendingLimit: Codable, Identifiable {
     }
     
     var usagePercentage: Double {
-        guard limit > 0 else { return 0.0 }
-        return currentSpending / limit
+        guard limit > 0, currentSpending >= 0 else { return 0.0 }
+        let percentage = currentSpending / limit
+        return percentage.isNaN || percentage.isInfinite ? 0.0 : percentage
     }
     
     var remainingAmount: Double {

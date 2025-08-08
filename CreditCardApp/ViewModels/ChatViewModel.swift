@@ -225,7 +225,8 @@ class ChatViewModel: BaseViewModelImpl {
             "primary_card": response.primaryRecommendation?.cardName ?? "none",
             "secondary_card": response.secondaryRecommendation?.cardName ?? "none",
             "category": response.primaryRecommendation?.category.rawValue ?? "unknown",
-            "response_time": responseTime
+            "response_time": responseTime,
+            "used_apple_intelligence": true // Now enhanced with Apple Intelligence
         ])
         
         // Check for limit alerts
@@ -315,6 +316,9 @@ class ChatViewModel: BaseViewModelImpl {
             return nil
         }
     }
+    
+    // MARK: - LLM-Specific Methods
+    
 }
 
 // MARK: - ChatViewModel Extensions

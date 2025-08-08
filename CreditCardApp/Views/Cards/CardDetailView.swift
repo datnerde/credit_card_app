@@ -98,7 +98,10 @@ struct CardDetailView: View {
                                     }
                                 }
                                 
-                                ProgressView(value: quarterlyBonus.currentSpending, total: quarterlyBonus.limit)
+                                ProgressView(
+                                    value: max(0, quarterlyBonus.currentSpending), 
+                                    total: max(1, quarterlyBonus.limit)
+                                )
                                     .progressViewStyle(LinearProgressViewStyle(tint: quarterlyBonus.currentSpending >= quarterlyBonus.limit ? .red : .orange))
                                 
                                 if quarterlyBonus.currentSpending >= quarterlyBonus.limit {
@@ -251,7 +254,10 @@ struct SpendingLimitCard: View {
                 }
             }
             
-            ProgressView(value: limit.currentSpending, total: limit.limit)
+            ProgressView(
+                value: max(0, limit.currentSpending), 
+                total: max(1, limit.limit)
+            )
                 .progressViewStyle(LinearProgressViewStyle(tint: limit.isLimitReached ? .red : (limit.isWarningThreshold ? .orange : .blue)))
             
             if limit.isLimitReached {

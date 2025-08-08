@@ -3,28 +3,27 @@ import Foundation
 
 struct CardListView: View {
     @EnvironmentObject var serviceContainer: AppServiceContainer
-    @State private var viewModel: CardListViewModel?
+    @StateObject private var viewModel = CardListViewModel(
+        dataManager: DataManager(), // Temporary placeholder
+        analyticsService: AnalyticsService.shared
+    )
     @State private var showingAddCard = false
     @State private var isLoading = true
     
     var body: some View {
         NavigationView {
             Group {
-                if let viewModel = viewModel {
-                    if viewModel.isLoading {
-                        LoadingView()
-                    } else if viewModel.cards.isEmpty {
-                        EmptyStateView(
-                            title: "No Cards Added",
-                            message: "Add your credit cards to get personalized recommendations",
-                            buttonTitle: "Add Card",
-                            action: { showingAddCard = true }
-                        )
-                    } else {
-                        cardList(viewModel: viewModel)
-                    }
-                } else {
+                if viewModel.isLoading {
                     LoadingView()
+                } else if viewModel.cards.isEmpty {
+                    EmptyStateView(
+                        title: "No Cards Added",
+                        message: "Add your credit cards to get personalized recommendations",
+                        buttonTitle: "Add Card",
+                        action: { showingAddCard = true }
+                    )
+                } else {
+                    cardList(viewModel: viewModel)
                 }
             }
             .navigationTitle("My Cards")
@@ -36,33 +35,52 @@ struct CardListView: View {
                 }
             }
             .onAppear {
-                if viewModel == nil {
-                    // Safely initialize the ViewModel using the service container
-                    viewModel = CardListViewModel(
-                        dataManager: serviceContainer.dataManager,
-                        analyticsService: serviceContainer.analyticsService
-                    )
+                print("🚀 CardListView onAppear called")
+                // Update the ViewModel with the proper DataManager from service container
+                viewModel.updateDataManager(serviceContainer.dataManager)
+                
+                print("🚀 Loading cards on app startup")
+                Task {
+                    await viewModel.loadCards()
+                    print("🚀 Initial card load completed. Card count: \(viewModel.cards.count)")
                 }
             }
             .sheet(isPresented: $showingAddCard) {
-                AddCardView()
+                AddCardView(onCardAdded: {
+                    print("🔄 Card added callback triggered, refreshing card list")
+                    Task { @MainActor in
+                        await viewModel.loadCards()
+                        print("🔄 Card list refreshed after card added. New count: \(viewModel.cards.count)")
+                    }
+                })
+                .environmentObject(serviceContainer)
+            }
+            .onChange(of: showingAddCard) { isPresented in
+                // Also refresh when sheet is dismissed (backup mechanism)
+                if !isPresented {
+                    print("🔄 AddCard sheet dismissed, refreshing card list. Current count: \(viewModel.cards.count)")
+                    Task {
+                        await viewModel.loadCards()
+                        print("🔄 Card list refreshed after sheet dismiss. New count: \(viewModel.cards.count)")
+                    }
+                }
             }
             .sheet(item: Binding(
-                get: { viewModel?.selectedCard },
-                set: { viewModel?.selectedCard = $0 }
+                get: { viewModel.selectedCard },
+                set: { viewModel.selectedCard = $0 }
             )) { (card: CreditCard) in
                 CardDetailView(card: card)
             }
         }
         .alert("Error", isPresented: Binding(
-            get: { viewModel?.errorMessage != nil },
+            get: { viewModel.errorMessage != nil },
             set: { _ in }
         )) {
             Button("OK") {
-                viewModel?.clearError()
+                viewModel.clearError()
             }
         } message: {
-            Text(viewModel?.errorMessage ?? "")
+            Text(viewModel.errorMessage ?? "")
         }
     }
     
@@ -74,13 +92,29 @@ struct CardListView: View {
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button("Delete", role: .destructive) {
-                        viewModel.deleteCard(card)
+                        Task { @MainActor in
+                            print("🗑️ UI: Starting card deletion for \(card.name)")
+                            await viewModel.deleteCard(card)
+                            print("🗑️ UI: Card deletion task completed")
+                        }
+                    }
+                }
+            }
+            .onDelete { indexSet in
+                // Handle delete via Edit mode as well
+                Task { @MainActor in
+                    for index in indexSet {
+                        if index < viewModel.cards.count {
+                            let card = viewModel.cards[index]
+                            print("🗑️ UI: Deleting card via onDelete: \(card.name)")
+                            await viewModel.deleteCard(card)
+                        }
                     }
                 }
             }
         }
         .refreshable {
-            viewModel.loadCards()
+            await viewModel.loadCards()
         }
     }
 }
@@ -165,7 +199,10 @@ struct CardRowView: View {
                                     .font(.caption)
                                     .frame(width: 80, alignment: .leading)
                                 
-                                ProgressView(value: limit.currentSpending, total: limit.limit)
+                                ProgressView(
+                                    value: max(0, limit.currentSpending), 
+                                    total: max(1, limit.limit)
+                                )
                                     .progressViewStyle(LinearProgressViewStyle(tint: limit.isWarningThreshold ? .orange : .blue))
                                 
                                 Text("$\(limit.currentSpending, specifier: "%.0f")")
@@ -215,7 +252,10 @@ struct CardRowView: View {
                                 .foregroundColor(.secondary)
                         }
                         
-                        ProgressView(value: quarterlyBonus.currentSpending, total: quarterlyBonus.limit)
+                        ProgressView(
+                            value: max(0, quarterlyBonus.currentSpending), 
+                            total: max(1, quarterlyBonus.limit)
+                        )
                             .progressViewStyle(LinearProgressViewStyle(tint: quarterlyBonus.currentSpending >= quarterlyBonus.limit ? .red : .blue))
                     }
                 }

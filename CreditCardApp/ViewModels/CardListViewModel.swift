@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 
+@MainActor
 class CardListViewModel: ObservableObject {
     @Published var cards: [CreditCard] = []
     @Published var showingAddCard = false
@@ -15,7 +16,7 @@ class CardListViewModel: ObservableObject {
         return errorMessage != nil
     }
     
-    private let dataManager: DataManager
+    private var dataManager: DataManager
     private let analyticsService: AnalyticsService
     private var cancellables = Set<AnyCancellable>()
     
@@ -23,100 +24,93 @@ class CardListViewModel: ObservableObject {
         self.dataManager = dataManager
         self.analyticsService = analyticsService
         
-        // Defer setup to avoid initialization crashes
-        DispatchQueue.main.async {
-            self.setupBindings()
-            self.loadCards()
-        }
+        setupBindings()
+        // Don't load cards in init - let the view control when to load
+    }
+    
+    // MARK: - Configuration Methods
+    
+    func updateDataManager(_ newDataManager: DataManager) {
+        self.dataManager = newDataManager
     }
     
     // MARK: - Public Methods
     
-    func loadCards() {
-        Task {
-            do {
-                let fetchedCards = try await dataManager.fetchCards()
-                await MainActor.run {
-                    self.cards = fetchedCards
-                    self.isLoading = false
-                }
-            } catch {
-                await MainActor.run {
-                    self.handleError(error)
-                }
-            }
+    func loadCards() async {
+        print("🔄 CardListViewModel.loadCards() called")
+        isLoading = true
+        do {
+            let fetchedCards = try await dataManager.fetchCards()
+            print("🔄 Fetched \(fetchedCards.count) cards from DataManager")
+            cards = fetchedCards
+            sortCards()
+            isLoading = false
+            print("🔄 CardListViewModel now has \(cards.count) cards")
+        } catch {
+            print("❌ Error loading cards: \(error)")
+            handleError(error)
         }
     }
     
-    func addCard(_ card: CreditCard) {
-        Task {
-            do {
-                try await dataManager.saveCard(card)
-                
-                await MainActor.run {
-                    self.cards.append(card)
-                    self.sortCards()
-                }
-                
-                // Track card addition
-                trackEvent("card_added", properties: [
-                    "card_type": card.cardType.rawValue,
-                    "has_quarterly_bonus": card.quarterlyBonus != nil
-                ])
-                
-            } catch {
-                await MainActor.run {
-                    handleError(error)
-                }
-            }
+    func addCard(_ card: CreditCard) async {
+        do {
+            try await dataManager.saveCard(card)
+            
+            cards.append(card)
+            sortCards()
+            
+            // Track card addition
+            trackEvent("card_added", properties: [
+                "card_type": card.cardType.rawValue,
+                "has_quarterly_bonus": card.quarterlyBonus != nil
+            ])
+            
+        } catch {
+            handleError(error)
         }
     }
     
-    func updateCard(_ card: CreditCard) {
-        Task {
-            do {
-                try await dataManager.updateCard(card)
-                
-                await MainActor.run {
-                    if let index = self.cards.firstIndex(where: { $0.id == card.id }) {
-                        self.cards[index] = card
-                        self.sortCards()
-                    }
-                }
-                
-                // Track card update
-                trackEvent("card_updated", properties: [
-                    "card_type": card.cardType.rawValue,
-                    "card_id": card.id.uuidString
-                ])
-                
-            } catch {
-                await MainActor.run {
-                    handleError(error)
-                }
+    func updateCard(_ card: CreditCard) async {
+        do {
+            try await dataManager.updateCard(card)
+            
+            if let index = cards.firstIndex(where: { $0.id == card.id }) {
+                cards[index] = card
+                sortCards()
             }
+            
+            // Track card update
+            trackEvent("card_updated", properties: [
+                "card_type": card.cardType.rawValue,
+                "card_id": card.id.uuidString
+            ])
+            
+        } catch {
+            handleError(error)
         }
     }
     
-    func deleteCard(_ card: CreditCard) {
-        Task {
-            do {
-                try await dataManager.deleteCard(card)
-                
-                await MainActor.run {
-                    self.cards.removeAll { $0.id == card.id }
-                }
-                
-                // Track card deletion
-                trackEvent("card_deleted", properties: [
-                    "card_type": card.cardType.rawValue
-                ])
-                
-            } catch {
-                await MainActor.run {
-                    handleError(error)
-                }
-            }
+    func deleteCard(_ card: CreditCard) async {
+        print("🗑️ Attempting to delete card: \(card.name) (ID: \(card.id))")
+        
+        do {
+            // First, delete from the data manager
+            try await dataManager.deleteCard(card)
+            print("🗑️ Successfully deleted card from DataManager")
+            
+            // Then refresh the entire card list to ensure UI consistency
+            await loadCards()
+            
+            // Track card deletion
+            trackEvent("card_deleted", properties: [
+                "card_type": card.cardType.rawValue
+            ])
+            
+            print("✅ Card deletion completed successfully")
+            
+        } catch {
+            print("❌ Error deleting card: \(error)")
+            handleError(error)
         }
     }
     
@@ -148,16 +142,21 @@ class CardListViewModel: ObservableObject {
         }
     }
     
-    func loadSampleData() {
-        Task {
-            do {
-                try await dataManager.loadSampleCardsData()
-                loadCards()
-            } catch {
-                await MainActor.run {
-                    handleError(error)
-                }
-            }
+    func loadSampleData() async {
+        do {
+            try await dataManager.loadSampleCardsData()
+            await loadCards()
+        } catch {
+            handleError(error)
+        }
+    }
+    
+    func removeDuplicateCards() async {
+        do {
+            try await dataManager.removeDuplicateCards()
+            await loadCards()
+        } catch {
+            handleError(error)
         }
     }
     
@@ -217,14 +216,6 @@ class CardListViewModel: ObservableObject {
     // MARK: - Private Methods
     
     private func setupBindings() {
-        // Auto-sort when cards change
-        $cards
-            .sink { [weak self] cards in
-                guard let self = self, !cards.isEmpty else { return }
-                self.sortCards()
-            }
-            .store(in: &cancellables)
-        
         // Apply filters when search text changes
         $searchText
             .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
@@ -315,19 +306,17 @@ class CardListViewModel: ObservableObject {
         }
     }
     
-    func importCardsData(_ jsonString: String) {
+    func importCardsData(_ jsonString: String) async {
         let decoder = JSONDecoder()
         
         do {
             let data = jsonString.data(using: .utf8) ?? Data()
             let importedCards = try decoder.decode([CreditCard].self, from: data)
             
-            Task {
-                for card in importedCards {
-                    try await dataManager.saveCard(card)
-                }
-                loadCards()
+            for card in importedCards {
+                try await dataManager.saveCard(card)
             }
+            await loadCards()
             
         } catch {
             handleError(error)
@@ -381,13 +370,13 @@ extension CardListViewModel {
         return cards.first { $0.id == id }
     }
     
-    func toggleCardActive(_ card: CreditCard) {
+    func toggleCardActive(_ card: CreditCard) async {
         var updatedCard = card
         updatedCard.isActive.toggle()
-        updateCard(updatedCard)
+        await updateCard(updatedCard)
     }
     
-    func duplicateCard(_ card: CreditCard) {
+    func duplicateCard(_ card: CreditCard) async {
         var newCard = card
         newCard.id = UUID()
         newCard.name = "\(card.name) (Copy)"
@@ -399,7 +388,7 @@ extension CardListViewModel {
             newCard.spendingLimits[i].currentSpending = 0
         }
         
-        addCard(newCard)
+        await addCard(newCard)
     }
     
     func getCardsByPointType(_ pointType: PointType) -> [CreditCard] {
@@ -411,24 +400,18 @@ extension CardListViewModel {
     // MARK: - Error Handling
     
     func handleError(_ error: Error) {
-        DispatchQueue.main.async {
-            self.errorMessage = error.localizedDescription
-            self.isLoading = false
-        }
+        errorMessage = error.localizedDescription
+        isLoading = false
     }
     
     func clearError() {
-        DispatchQueue.main.async {
-            self.errorMessage = nil
-        }
+        errorMessage = nil
     }
     
     // MARK: - Loading State Management
     
     func setLoading(_ loading: Bool) {
-        DispatchQueue.main.async {
-            self.isLoading = loading
-        }
+        isLoading = loading
     }
     
     // MARK: - Analytics

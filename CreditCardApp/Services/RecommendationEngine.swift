@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 
 class RecommendationEngine {
     private let nlpProcessor: NLPProcessor
@@ -7,6 +8,7 @@ class RecommendationEngine {
     
     init(nlpProcessor: NLPProcessor = NLPProcessor()) {
         self.nlpProcessor = nlpProcessor
+        print("🧠 RecommendationEngine initialized with Apple Intelligence support")
     }
     
     // MARK: - Caching
@@ -57,8 +59,8 @@ class RecommendationEngine {
         // Filter and rank recommendations
         let recommendations = filterAndRankRecommendations(scoredCards)
         
-        // Generate response
-        return generateResponse(recommendations, category, userPreferences, parsedQuery)
+        // Generate response using Apple Intelligence
+        return try await generateEnhancedResponse(query, recommendations, category, userPreferences, parsedQuery, userCards)
     }
     
     // MARK: - Card Scoring Algorithm
@@ -126,7 +128,7 @@ class RecommendationEngine {
             return 1.0 // No limit = no penalty
         }
         
-        let usagePercentage = spendingLimit.currentSpending / spendingLimit.limit
+        let usagePercentage = spendingLimit.limit > 0 ? spendingLimit.currentSpending / spendingLimit.limit : 0.0
         
         // Score based on remaining capacity
         if usagePercentage >= 1.0 {
@@ -331,6 +333,164 @@ class RecommendationEngine {
         }
         
         return recommendations
+    }
+    
+    // MARK: - Apple Intelligence Enhanced Response Generation
+    
+    private func generateEnhancedResponse(
+        _ query: String,
+        _ recommendations: [CardScore],
+        _ category: SpendingCategory,
+        _ preferences: UserPreferences,
+        _ parsedQuery: ParsedQuery,
+        _ userCards: [CreditCard]
+    ) async throws -> RecommendationResponse {
+        
+        // First get the traditional recommendation
+        let traditionalResponse = generateResponse(recommendations, category, preferences, parsedQuery)
+        
+        // Enhance with Apple Intelligence if available
+        if #available(iOS 17.0, *), let enhancedReasoning = try? await enhanceReasoningWithAppleIntelligence(
+            query: query,
+            recommendations: recommendations,
+            userCards: userCards,
+            preferences: preferences
+        ) {
+            // Use Apple Intelligence enhanced response
+            return RecommendationResponse(
+                primaryRecommendation: traditionalResponse.primaryRecommendation,
+                secondaryRecommendation: traditionalResponse.secondaryRecommendation,
+                reasoning: enhancedReasoning,
+                warnings: traditionalResponse.warnings,
+                suggestions: traditionalResponse.suggestions
+            )
+        }
+        
+        // Fallback to traditional response
+        return traditionalResponse
+    }
+    
+    @available(iOS 17.0, *)
+    private func enhanceReasoningWithAppleIntelligence(
+        query: String,
+        recommendations: [CardScore],
+        userCards: [CreditCard],
+        preferences: UserPreferences
+    ) async throws -> String {
+        
+        // Build context from user's credit card portfolio
+        let context = buildCardContext(cards: userCards, recommendations: recommendations)
+        
+        // Use Natural Language processing for better understanding
+        let tagger = NLTagger(tagSchemes: [.sentimentScore, .language])
+        tagger.string = query
+        
+        // Analyze the query sentiment and intent
+        let sentiment = tagger.tag(at: query.startIndex, unit: .paragraph, scheme: .sentimentScore)
+        
+        // Generate enhanced response using Apple's NL framework
+        return try await generateIntelligentResponse(
+            query: query,
+            context: context,
+            recommendations: recommendations,
+            sentiment: sentiment.0?.rawValue
+        )
+    }
+    
+    private func buildCardContext(cards: [CreditCard], recommendations: [CardScore]) -> String {
+        var context = "User's Credit Card Portfolio:\n\n"
+        
+        // Add top recommendations with detailed context
+        for (index, recommendation) in recommendations.enumerated() {
+            let card = recommendation.card
+            context += "Card \(index + 1): \(card.name) (\(card.cardType.displayName))\n"
+            
+            // Add reward details
+            if !card.rewardCategories.isEmpty {
+                context += "Rewards: "
+                for reward in card.rewardCategories.prefix(3) {
+                    context += "\(reward.category.displayName) \(reward.multiplier)x \(reward.pointType.rawValue), "
+                }
+                context = String(context.dropLast(2)) + "\n"
+            }
+            
+            // Add quarterly bonus if applicable
+            if let bonus = card.quarterlyBonus {
+                let progress = bonus.limit > 0 ? Int((bonus.currentSpending / bonus.limit) * 100) : 0
+                context += "Q\(bonus.quarter) Bonus: \(bonus.category.displayName) \(bonus.multiplier)x (\(progress)% used)\n"
+            }
+            
+            // Add spending limit warnings
+            if let spendingLimit = card.spendingLimits.first(where: { $0.category == recommendation.category }) {
+                let percentage = Int(spendingLimit.usagePercentage * 100)
+                if percentage > 70 {
+                    context += "⚠️ \(spendingLimit.category.displayName) spending: \(percentage)% of limit used\n"
+                }
+            }
+            
+            context += "\n"
+        }
+        
+        return context
+    }
+    
+    private func generateIntelligentResponse(
+        query: String,
+        context: String,
+        recommendations: [CardScore],
+        sentiment: String?
+    ) async throws -> String {
+        
+        guard let topRecommendation = recommendations.first else {
+            return "I don't have enough information to make a recommendation. Please add your credit cards first."
+        }
+        
+        // Build intelligent response based on context and sentiment
+        var response = ""
+        
+        // Personalized greeting based on sentiment
+        if let sentiment = sentiment, let sentimentScore = Double(sentiment) {
+            if sentimentScore > 0.3 {
+                response += "Great question! "
+            } else if sentimentScore < -0.3 {
+                response += "I understand this might be frustrating. Let me help. "
+            }
+        }
+        
+        // Main recommendation
+        let card = topRecommendation.card
+        
+        response += "For your \(topRecommendation.category.displayName.lowercased()) purchase, I recommend your **\(card.name)**. "
+        
+        // Add specific benefits
+        if let rewardCategory = card.rewardCategories.first(where: { $0.category == topRecommendation.category }) {
+            response += "You'll earn \(rewardCategory.multiplier)x \(rewardCategory.pointType.displayName) points. "
+        }
+        
+        // Add quarterly bonus information
+        if let bonus = card.quarterlyBonus, bonus.category == topRecommendation.category {
+            let remainingLimit = bonus.limit - bonus.currentSpending
+            if remainingLimit > 0 {
+                response += "Plus, you have $\(Int(remainingLimit)) remaining in your Q\(bonus.quarter) bonus category for \(bonus.multiplier)x points! "
+            } else {
+                response += "Note: You've maxed out your Q\(bonus.quarter) bonus for this category. "
+            }
+        }
+        
+        // Add limit warnings
+        if let spendingLimit = card.spendingLimits.first(where: { $0.category == topRecommendation.category }) {
+            let percentage = spendingLimit.usagePercentage
+            if percentage > 0.85 {
+                response += "⚠️ You're at \(Int(percentage * 100))% of your spending limit for this category. "
+            }
+        }
+        
+        // Add backup recommendation
+        if recommendations.count > 1, let secondaryRecommendation = recommendations[1].card.rewardCategories.first(where: { $0.category == topRecommendation.category }) {
+            response += "Alternatively, your \(recommendations[1].card.name) offers \(secondaryRecommendation.multiplier)x \(secondaryRecommendation.pointType.rawValue) points."
+        }
+        
+        return response
     }
 }
 

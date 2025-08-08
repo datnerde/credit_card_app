@@ -5,6 +5,7 @@ extension Double {
     // MARK: - Currency Formatting
     
     var asCurrency: String {
+        guard !self.isNaN && !self.isInfinite else { return "$0.00" }
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.locale = Locale.current
@@ -12,6 +13,7 @@ extension Double {
     }
     
     var asCurrencyWithoutSymbol: String {
+        guard !self.isNaN && !self.isInfinite else { return "0.00" }
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
         formatter.minimumFractionDigits = 2
@@ -36,6 +38,7 @@ extension Double {
     // MARK: - Percentage Formatting
     
     var asPercentage: String {
+        guard !self.isNaN && !self.isInfinite else { return "0.0%" }
         let formatter = NumberFormatter()
         formatter.numberStyle = .percent
         formatter.minimumFractionDigits = 1
@@ -44,6 +47,7 @@ extension Double {
     }
     
     var asPercentageWithoutSymbol: String {
+        guard !self.isNaN && !self.isInfinite else { return "0.0" }
         return String(format: "%.1f", self * 100)
     }
     
