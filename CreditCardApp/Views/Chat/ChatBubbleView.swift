@@ -153,6 +153,25 @@ struct CardRecommendationView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.leading)
+
+            // Smart Pay button - jump to payment with this card
+            if recommendation.rank == 1 && !recommendation.isLimitReached {
+                NavigationLink {
+                    SmartPayView()
+                } label: {
+                    HStack {
+                        Image(systemName: "wand.and.stars")
+                        Text("Pay with this card")
+                    }
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.blue)
+                    .clipShape(Capsule())
+                }
+            }
         }
         .padding()
         .background(Color(.systemGray6))

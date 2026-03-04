@@ -48,19 +48,25 @@ struct ContentView: View {
     
     var body: some View {
         TabView {
+            SmartPayView()
+                .tabItem {
+                    Image(systemName: "wand.and.stars")
+                    Text("Smart Pay")
+                }
+
             ChatView()
                 .tabItem {
                     Image(systemName: "message.fill")
                     Text("Chat")
                 }
-            
+
             CardListView()
                 .environmentObject(serviceContainer)
                 .tabItem {
                     Image(systemName: "creditcard.fill")
                     Text("My Cards")
                 }
-            
+
             SettingsView()
                 .environmentObject(serviceContainer)
                 .tabItem {
