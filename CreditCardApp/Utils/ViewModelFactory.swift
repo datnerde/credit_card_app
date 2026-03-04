@@ -34,4 +34,14 @@ class ViewModelFactory {
             analyticsService: serviceContainer.analyticsService
         )
     }
+
+    static func makeSmartPaymentViewModel() -> SmartPaymentViewModel {
+        return SmartPaymentViewModel(
+            dataManager: serviceContainer.dataManager,
+            recommendationEngine: serviceContainer.recommendationEngine,
+            nlpProcessor: serviceContainer.nlpProcessor,
+            walletService: serviceContainer.walletIntegrationService,
+            analyticsService: serviceContainer.analyticsService
+        )
+    }
 }
