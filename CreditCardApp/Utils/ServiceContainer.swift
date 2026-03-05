@@ -9,7 +9,6 @@ class ServiceContainer: ObservableObject {
     let nlpProcessor: NLPProcessor
     let notificationService: NotificationService
     let analyticsService: AnalyticsService
-    let walletIntegrationService: WalletIntegrationService
     
     private init() {
         // Use real Core Data services for production
@@ -18,8 +17,7 @@ class ServiceContainer: ObservableObject {
         self.nlpProcessor = NLPProcessor()
         self.notificationService = NotificationService.shared
         self.analyticsService = AnalyticsService.shared
-        self.walletIntegrationService = WalletIntegrationService.shared
-
+        
         // Load sample data on first launch
         loadSampleDataIfNeeded()
     }
