@@ -359,17 +359,36 @@ class DataManager: ObservableObject {
                 ]
             ),
             CreditCard(
-                name: "Chase Freedom",
-                cardType: .chaseFreedom,
+                name: "Chase Sapphire Reserve",
+                cardType: .chaseSapphireReserve,
+                spendingLimits: [
+                    SpendingLimit(category: .travel, limit: 50000, currentSpending: 5000),
+                    SpendingLimit(category: .dining, limit: 30000, currentSpending: 8000)
+                ]
+            ),
+            CreditCard(
+                name: "Chase Freedom Flex",
+                cardType: .chaseFreedomFlex,
                 quarterlyBonus: QuarterlyBonus(
                     category: .gas,
                     multiplier: 5.0,
                     pointType: .ultimateRewards,
                     limit: 1500,
-                    currentSpending: 1500
+                    currentSpending: 600
                 ),
                 spendingLimits: [
-                    SpendingLimit(category: .gas, limit: 1500, currentSpending: 1500)
+                    SpendingLimit(category: .gas, limit: 1500, currentSpending: 600, resetType: .quarterly)
+                ]
+            ),
+            CreditCard(
+                name: "Robinhood Gold Card",
+                cardType: .robinhoodGold
+            ),
+            CreditCard(
+                name: "Amex Blue Cash Preferred",
+                cardType: .amexBlueCashPreferred,
+                spendingLimits: [
+                    SpendingLimit(category: .groceries, limit: 6000, currentSpending: 1500, resetType: .annually)
                 ]
             )
         ]

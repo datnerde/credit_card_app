@@ -24,34 +24,34 @@ class MockDataManager: DataManager {
         if let index = cards.firstIndex(where: { $0.id == card.id }) {
             cards[index] = card
         } else {
-            throw DataError.cardNotFound
+            throw MockDataError.cardNotFound
         }
     }
-    
+
     override func deleteCard(_ card: CreditCard) async throws {
         cards.removeAll { $0.id == card.id }
     }
-    
+
     override func loadUserPreferences() async throws -> UserPreferences {
         return userPreferences
     }
-    
+
     override func saveUserPreferences(_ preferences: UserPreferences) async throws {
         self.userPreferences = preferences
     }
-    
+
     override func fetchChatMessages() async throws -> [ChatMessage] {
         return chatMessages
     }
-    
+
     override func saveChatMessage(_ message: ChatMessage) async throws {
         chatMessages.append(message)
     }
-    
+
     override func clearChatHistory() async throws {
         chatMessages.removeAll()
     }
-    
+
     override func loadSampleData() async throws {
         cards = MockData.sampleCards
         chatMessages = MockData.sampleChatMessages
@@ -59,7 +59,7 @@ class MockDataManager: DataManager {
     }
 }
 
-enum DataError: Error {
+enum MockDataError: Error {
     case cardNotFound
     case saveFailed
     case loadFailed

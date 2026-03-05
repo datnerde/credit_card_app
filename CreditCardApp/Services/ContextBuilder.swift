@@ -59,8 +59,8 @@ class ContextBuilder {
         )
     }
     
-    private func determineIntent(query: String) -> QueryIntent {
-        let intentPatterns: [QueryIntent: [String]] = [
+    private func determineIntent(query: String) -> ContextQueryIntent {
+        let intentPatterns: [ContextQueryIntent: [String]] = [
             .cardRecommendation: ["which card", "best card", "recommend", "should i use", "what card"],
             .spendingUpdate: ["spent", "spending", "update", "bought", "purchased"],
             .limitInquiry: ["limit", "remaining", "how much left", "progress", "usage"],
@@ -359,7 +359,7 @@ struct LLMContext {
 
 struct QueryAnalysis {
     let originalQuery: String
-    let intent: QueryIntent
+    let intent: ContextQueryIntent
     let category: SpendingCategory?
     let merchant: String?
     let amount: Double?
@@ -367,7 +367,7 @@ struct QueryAnalysis {
     let keywords: [String]
 }
 
-enum QueryIntent: CaseIterable {
+enum ContextQueryIntent: CaseIterable {
     case cardRecommendation
     case spendingUpdate
     case limitInquiry
