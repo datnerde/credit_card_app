@@ -245,24 +245,107 @@ struct Merchant: Codable, Identifiable {
 
 // MARK: - Pre-defined Merchant Mappings
 let merchantMappings: [String: SpendingCategory] = [
+    // Grocery / Supermarket
     "costco": .costco,
     "whole foods": .wholeFoods,
     "wholefoods": .wholeFoods,
+    "trader joe": .groceries,
+    "trader joe's": .groceries,
+    "kroger": .groceries,
+    "safeway": .groceries,
+    "publix": .groceries,
+    "aldi": .groceries,
+    "h-e-b": .groceries,
+    "wegmans": .groceries,
+    "sprouts": .groceries,
+
+    // General Retail
     "amazon": .amazon,
     "target": .target,
     "walmart": .walmart,
+    "best buy": .online,
+    "apple store": .online,
+    "ikea": .general,
+
+    // Coffee
     "starbucks": .coffee,
+    "dunkin": .coffee,
+    "peet's": .coffee,
+    "philz": .coffee,
+
+    // Fast Food / Dining
     "mcdonalds": .fastFood,
     "mcdonald's": .fastFood,
+    "chipotle": .fastFood,
+    "chick-fil-a": .fastFood,
+    "subway": .fastFood,
+    "taco bell": .fastFood,
+    "wendy's": .fastFood,
+    "popeyes": .fastFood,
+    "panda express": .fastFood,
+    "doordash": .dining,
+    "uber eats": .dining,
+    "grubhub": .dining,
+
+    // Transit / Ride Share
     "uber": .transit,
     "lyft": .transit,
+
+    // Streaming
     "netflix": .streaming,
     "spotify": .streaming,
+    "hulu": .streaming,
+    "disney+": .streaming,
+    "disney plus": .streaming,
+    "apple tv": .streaming,
+    "hbo max": .streaming,
+    "youtube": .streaming,
+    "peacock": .streaming,
+    "paramount+": .streaming,
+
+    // Drugstores
     "cvs": .drugstores,
     "walgreens": .drugstores,
+    "rite aid": .drugstores,
+
+    // Gas Stations
     "shell": .gas,
     "exxon": .gas,
     "chevron": .gas,
     "bp": .gas,
-    "mobil": .gas
+    "mobil": .gas,
+    "costco gas": .gas,
+    "arco": .gas,
+    "76": .gas,
+    "speedway": .gas,
+
+    // Travel / Airlines / Hotels
+    "united": .airfare,
+    "delta": .airfare,
+    "american airlines": .airfare,
+    "southwest": .airfare,
+    "jetblue": .airfare,
+    "spirit": .airfare,
+    "frontier": .airfare,
+    "marriott": .hotels,
+    "hilton": .hotels,
+    "hyatt": .hotels,
+    "airbnb": .hotels,
+    "expedia": .travel,
+    "booking.com": .hotels,
+
+    // PayPal / Fintech
+    "paypal": .paypal,
+    "venmo": .paypal,
+
+    // Entertainment
+    "amc": .entertainment,
+    "regal": .entertainment,
+    "ticketmaster": .entertainment,
+    "stubhub": .entertainment,
+
+    // Rent
+    "rent": .rent,
+    "landlord": .rent,
+    "apartment": .rent,
 ] 

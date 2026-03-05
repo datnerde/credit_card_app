@@ -220,12 +220,23 @@ class WalletIntegrationService: NSObject, ObservableObject {
 
     func paymentNetworkForCardType(_ cardType: CardType) -> PKPaymentNetwork {
         switch cardType {
-        case .amexGold, .amexPlatinum:
+        case .amexGold, .amexPlatinum, .amexBlueCashPreferred:
             return .amex
-        case .chaseFreedom, .chaseSapphirePreferred, .chaseSapphireReserve:
+        case .chaseFreedom, .chaseFreedomFlex, .chaseFreedomUnlimited,
+             .chaseSapphirePreferred, .chaseSapphireReserve:
             return .visa
         case .citiDoubleCash:
             return .masterCard
+        case .capitalOneSavorOne, .capitalOneVentureX:
+            return .visa
+        case .discoverIt:
+            return .discover
+        case .robinhoodGold:
+            return .visa
+        case .paypalCashback, .biltMastercard:
+            return .masterCard
+        case .wellsFargoActiveCash:
+            return .visa
         case .custom:
             return .visa
         }

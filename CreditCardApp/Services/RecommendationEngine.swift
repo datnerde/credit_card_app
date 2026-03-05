@@ -511,6 +511,21 @@ struct RecommendationResponse {
     let reasoning: String
     let warnings: [String]
     let suggestions: [String]
+    let confidence: Double
+
+    init(primaryRecommendation: CardRecommendation? = nil,
+         secondaryRecommendation: CardRecommendation? = nil,
+         reasoning: String = "",
+         warnings: [String] = [],
+         suggestions: [String] = [],
+         confidence: Double = 1.0) {
+        self.primaryRecommendation = primaryRecommendation
+        self.secondaryRecommendation = secondaryRecommendation
+        self.reasoning = reasoning
+        self.warnings = warnings
+        self.suggestions = suggestions
+        self.confidence = confidence
+    }
 }
 
 struct CardScore {
