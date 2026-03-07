@@ -118,12 +118,24 @@ class SettingsViewModel: BaseViewModelImpl {
         let oldValue = userPreferences.autoUpdateSpending
         userPreferences.autoUpdateSpending.toggle()
         saveUserPreferences()
-        
+
         // Track preference change
         trackEvent("preference_changed", properties: [
             "setting": "auto_update_spending",
             "old_value": oldValue,
             "new_value": userPreferences.autoUpdateSpending
+        ])
+    }
+
+    func toggleApplePay() {
+        let oldValue = userPreferences.useApplePay
+        userPreferences.useApplePay.toggle()
+        saveUserPreferences()
+
+        trackEvent("preference_changed", properties: [
+            "setting": "use_apple_pay",
+            "old_value": oldValue,
+            "new_value": userPreferences.useApplePay
         ])
     }
     
@@ -317,9 +329,13 @@ class SettingsViewModel: BaseViewModelImpl {
             return "Capital One miles"
         case .discoverCashback:
             return "Discover cash back"
+        case .biltRewards:
+            return "Bilt Rewards points"
+        case .ventureXMiles:
+            return "Capital One Venture X miles"
         }
     }
-    
+
     func getPointSystemValue(_ pointSystem: PointType) -> String {
         switch pointSystem {
         case .membershipRewards:
@@ -334,6 +350,10 @@ class SettingsViewModel: BaseViewModelImpl {
             return "1.0-1.4 cents per mile"
         case .discoverCashback:
             return "1.0 cent per dollar"
+        case .biltRewards:
+            return "1.5-2.0 cents per point"
+        case .ventureXMiles:
+            return "1.0-1.5 cents per mile"
         }
     }
 }

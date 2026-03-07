@@ -4,26 +4,18 @@ import PassKit
 struct SmartPayView: View {
     @StateObject private var viewModel = ViewModelFactory.makeSmartPaymentViewModel()
 
+    private let accentTeal = Color(hex: "00D09C")
+
     var body: some View {
         NavigationView {
             ZStack {
-                // Background gradient
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(.systemBackground),
-                        Color.blue.opacity(0.05)
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+                Color(.systemBackground).ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: 20) {
+                    VStack(spacing: 24) {
                         switch viewModel.flowState {
                         case .idle:
-                            purchaseInputSection
-                            quickCategoriesSection
+                            idleSection
                         case .analyzing:
                             analyzingSection
                         case .recommendationReady:
@@ -36,16 +28,25 @@ struct SmartPayView: View {
                             paymentFailedSection(message)
                         }
                     }
-                    .padding()
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
                 }
             }
-            .navigationTitle("Smart Pay")
+            .navigationTitle("Pay")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 if viewModel.flowState != .idle {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Start Over") {
-                            withAnimation { viewModel.reset() }
+                        Button {
+                            withAnimation(.spring(response: 0.35)) {
+                                viewModel.reset()
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.left")
+                                Text("Back")
+                            }
+                            .foregroundColor(accentTeal)
                         }
                     }
                 }
@@ -56,226 +57,184 @@ struct SmartPayView: View {
         }
     }
 
-    // MARK: - Purchase Input Section
+    // MARK: - Idle: Category Picker
 
-    private var purchaseInputSection: some View {
-        VStack(spacing: 16) {
-            // Hero section
-            VStack(spacing: 8) {
-                Image(systemName: "wand.and.stars")
-                    .font(.system(size: 50))
-                    .foregroundColor(.blue)
-
-                Text("What are you buying?")
+    private var idleSection: some View {
+        VStack(spacing: 24) {
+            // Hero
+            VStack(spacing: 6) {
+                Text("What are you spending on?")
                     .font(.title2)
                     .fontWeight(.bold)
 
-                Text("Describe your purchase and we'll pick the best card")
+                Text("Tap a category to find your best card")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
             }
-            .padding(.top, 20)
+            .padding(.top, 12)
 
-            // Purchase description input
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Purchase Description")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                TextField("e.g. Groceries at Whole Foods, Gas at Shell...",
-                          text: $viewModel.purchaseDescription)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.body)
-                    .submitLabel(.done)
-                    .onSubmit {
-                        if viewModel.canAnalyze {
-                            viewModel.analyzePurchase()
-                        }
-                    }
-            }
-
-            // Amount input
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Amount (optional for recommendation, required for payment)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                HStack {
-                    Text("$")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                    TextField("0.00", text: $viewModel.purchaseAmount)
-                        .keyboardType(.decimalPad)
-                        .font(.title2)
-                        .fontWeight(.semibold)
+            // Category grid
+            CategoryPickerView { category in
+                withAnimation(.spring(response: 0.35)) {
+                    viewModel.selectCategory(category)
                 }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
             }
 
-            // Analyze button
-            Button {
-                viewModel.analyzePurchase()
-            } label: {
-                HStack {
-                    Image(systemName: "sparkles")
-                    Text("Find Best Card")
-                }
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(viewModel.canAnalyze ? Color.blue : Color.gray)
-                .cornerRadius(14)
-            }
-            .disabled(!viewModel.canAnalyze)
-
+            // No cards warning
             if viewModel.userCards.isEmpty {
-                HStack {
+                HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundColor(.orange)
-                    Text("Add your credit cards first in the 'My Cards' tab")
+                    Text("Add your cards in the Wallet tab first")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-            }
-        }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 10)
-    }
-
-    // MARK: - Quick Categories
-
-    private var quickCategoriesSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Quick Categories")
-                .font(.headline)
-                .padding(.horizontal, 4)
-
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 12) {
-                ForEach(viewModel.quickCategories) { qc in
-                    Button {
-                        viewModel.selectQuickCategory(qc.category)
-                    } label: {
-                        VStack(spacing: 8) {
-                            Image(systemName: qc.emoji)
-                                .font(.title2)
-                                .foregroundColor(.blue)
-                            Text(qc.label)
-                                .font(.caption)
-                                .foregroundColor(.primary)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
-                    }
-                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
             }
         }
     }
 
-    // MARK: - Analyzing Section
+    // MARK: - Analyzing
 
     private var analyzingSection: some View {
         VStack(spacing: 20) {
             Spacer().frame(height: 60)
-
             ProgressView()
                 .scaleEffect(1.5)
-
-            Text("Analyzing your purchase...")
+                .tint(accentTeal)
+            Text("Finding your best card...")
                 .font(.headline)
-
-            Text("Finding the best card from your wallet")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
             Spacer()
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
     }
 
-    // MARK: - Recommendation Section
+    // MARK: - Recommendation Result
 
     private var recommendationSection: some View {
-        VStack(spacing: 16) {
-            // Detected info
-            VStack(spacing: 4) {
-                HStack {
-                    Image(systemName: viewModel.detectedCategory.icon)
-                        .foregroundColor(.blue)
-                    Text(viewModel.detectedCategory.displayName)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    if let merchant = viewModel.detectedMerchant {
-                        Text("at \(merchant.capitalized)")
+        VStack(spacing: 20) {
+            // Category badge
+            HStack(spacing: 6) {
+                Image(systemName: viewModel.detectedCategory.icon)
+                    .foregroundColor(accentTeal)
+                Text(viewModel.detectedCategory.displayName)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(accentTeal.opacity(0.1))
+            .clipShape(Capsule())
+
+            // Primary card
+            if let card = viewModel.recommendedCard {
+                VStack(spacing: 12) {
+                    Text("USE THIS CARD")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(accentTeal)
+                        .tracking(1.2)
+
+                    CreditCardVisualView(
+                        cardType: card.cardType,
+                        cardName: card.name,
+                        size: .full
+                    )
+
+                    // Multiplier badge
+                    HStack(spacing: 8) {
+                        Text(viewModel.multiplierDisplay)
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .foregroundColor(accentTeal)
+
+                        Text(viewModel.pointTypeDisplay)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
+
+                        if viewModel.estimatedPoints > 0 {
+                            Spacer()
+                            Text("\(String(format: "%.0f", viewModel.estimatedPoints)) pts")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(accentTeal)
+                        }
                     }
                 }
-            }
-
-            // Primary recommendation card
-            if let card = viewModel.recommendedCard {
-                recommendedCardView(
-                    card: card,
-                    isPrimary: true,
-                    points: viewModel.estimatedPoints,
-                    multiplier: viewModel.multiplierDisplay
-                )
-            }
-
-            // Secondary recommendation
-            if let card = viewModel.secondaryCard {
-                recommendedCardView(
-                    card: card,
-                    isPrimary: false,
-                    points: viewModel.estimatedPointsSecondary,
-                    multiplier: nil
-                )
+                .padding()
+                .background(Color(.systemGray6))
+                .cornerRadius(16)
             }
 
             // Reasoning
             if !viewModel.recommendationReasoning.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "lightbulb.fill")
-                            .foregroundColor(.yellow)
-                        Text("Why this card?")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .foregroundColor(.yellow)
+                        .font(.caption)
                     Text(viewModel.recommendationReasoning)
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(4)
                 }
-                .padding()
+                .padding(12)
                 .background(Color(.systemGray6))
                 .cornerRadius(12)
             }
 
-            // Amount input (if not entered yet)
-            if viewModel.parsedAmount == 0 {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Enter amount to pay")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+            // Secondary card
+            if let secondaryCard = viewModel.secondaryCard {
+                VStack(spacing: 8) {
+                    Text("RUNNER UP")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .tracking(1)
+
+                    HStack(spacing: 12) {
+                        CreditCardVisualView(
+                            cardType: secondaryCard.cardType,
+                            cardName: secondaryCard.name,
+                            size: .compact
+                        )
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(secondaryCard.name)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            Text(secondaryCard.cardType.displayName)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        if !viewModel.useApplePay {
+                            Button("Use this") {
+                                viewModel.recommendedCard = secondaryCard
+                            }
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(accentTeal)
+                        }
+                    }
+                    .padding(12)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                }
+            }
+
+            // Action buttons
+            if viewModel.useApplePay {
+                // Apple Pay flow: show amount input + pay button
+                VStack(spacing: 12) {
                     HStack {
                         Text("$")
                             .font(.title2)
                             .foregroundColor(.secondary)
-                        TextField("0.00", text: $viewModel.purchaseAmount)
+                        TextField("Amount", text: $viewModel.purchaseAmount)
                             .keyboardType(.decimalPad)
                             .font(.title2)
                             .fontWeight(.semibold)
@@ -283,120 +242,55 @@ struct SmartPayView: View {
                     .padding()
                     .background(Color(.systemGray6))
                     .cornerRadius(12)
-                }
-            }
 
-            // Apple Pay button
-            if viewModel.isApplePayAvailable {
-                ApplePayButtonView {
-                    viewModel.payWithRecommendedCard()
+                    if viewModel.isApplePayAvailable {
+                        ApplePayButtonView {
+                            viewModel.payWithRecommendedCard()
+                        }
+                        .frame(height: 50)
+                        .disabled(!viewModel.canPay)
+                        .opacity(viewModel.canPay ? 1.0 : 0.5)
+                    } else {
+                        Button {
+                            viewModel.payWithRecommendedCard()
+                        } label: {
+                            HStack {
+                                Image(systemName: "apple.logo")
+                                Text("Pay with Apple Pay")
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.black)
+                            .cornerRadius(14)
+                        }
+                        .disabled(!viewModel.canPay)
+                        .opacity(viewModel.canPay ? 1.0 : 0.5)
+                    }
                 }
-                .frame(height: 50)
-                .disabled(!viewModel.canPay)
-                .opacity(viewModel.canPay ? 1.0 : 0.5)
             } else {
-                // Fallback for simulator / no Apple Pay
+                // "Got it!" flow: just confirm and go back
                 Button {
-                    viewModel.payWithRecommendedCard()
+                    viewModel.dismissRecommendation()
                 } label: {
-                    HStack {
-                        Image(systemName: "apple.logo")
-                        Text("Pay with Apple Pay")
-                    }
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.black)
-                    .cornerRadius(14)
-                }
-                .disabled(!viewModel.canPay)
-                .opacity(viewModel.canPay ? 1.0 : 0.5)
-            }
-        }
-    }
-
-    // MARK: - Card Recommendation View
-
-    private func recommendedCardView(
-        card: CreditCard,
-        isPrimary: Bool,
-        points: Double,
-        multiplier: String?
-    ) -> some View {
-        VStack(spacing: 0) {
-            if isPrimary {
-                // Best card badge
-                HStack {
-                    Image(systemName: "star.fill")
-                        .font(.caption2)
-                    Text("BEST CARD")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(Color.green)
-                .cornerRadius(8, corners: [.topLeft, .topRight])
-            }
-
-            HStack {
-                // Card icon
-                VStack {
-                    Image(systemName: "creditcard.fill")
-                        .font(.title)
-                        .foregroundColor(isPrimary ? .blue : .gray)
-                }
-                .frame(width: 50)
-
-                // Card details
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(card.name)
+                    Text("Got it!")
                         .font(.headline)
-                        .fontWeight(isPrimary ? .bold : .medium)
-                    Text(card.cardType.displayName)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .fontWeight(.bold)
+                        .foregroundColor(Color(hex: "0A0A1A"))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            LinearGradient(
+                                colors: [accentTeal, Color(hex: "00E6AC")],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(14)
                 }
-
-                Spacer()
-
-                // Points info
-                VStack(alignment: .trailing, spacing: 4) {
-                    if let mult = multiplier {
-                        Text(mult)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(isPrimary ? .blue : .secondary)
-                    }
-                    if points > 0 {
-                        Text("\(String(format: "%.0f", points)) pts")
-                            .font(.caption)
-                            .foregroundColor(.green)
-                    }
-                }
-            }
-            .padding()
-            .background(Color(.systemBackground))
-            .overlay(
-                RoundedRectangle(cornerRadius: isPrimary ? 0 : 12)
-                    .stroke(isPrimary ? Color.blue : Color.gray.opacity(0.3), lineWidth: isPrimary ? 2 : 1)
-            )
-
-            // Use this card button for secondary
-            if !isPrimary {
-                Button {
-                    viewModel.payWithSecondaryCard()
-                } label: {
-                    Text("Use this card instead")
-                        .font(.caption)
-                        .foregroundColor(.blue)
-                }
-                .padding(.top, 6)
             }
         }
-        .cornerRadius(12)
     }
 
     // MARK: - Processing Payment
@@ -404,17 +298,14 @@ struct SmartPayView: View {
     private var processingPaymentSection: some View {
         VStack(spacing: 20) {
             Spacer().frame(height: 60)
-
             ProgressView()
                 .scaleEffect(1.5)
-
+                .tint(accentTeal)
             Text("Processing Payment...")
                 .font(.headline)
-
             Text("Complete the payment in Apple Pay")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
-
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -429,7 +320,7 @@ struct SmartPayView: View {
 
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 80))
-                .foregroundColor(.green)
+                .foregroundColor(accentTeal)
 
             Text("Payment Successful!")
                 .font(.title2)
@@ -453,12 +344,12 @@ struct SmartPayView: View {
             Button {
                 withAnimation { viewModel.reset() }
             } label: {
-                Text("New Purchase")
+                Text("Done")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color(hex: "0A0A1A"))
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue)
+                    .background(accentTeal)
                     .cornerRadius(14)
             }
             .padding(.top, 10)
@@ -490,7 +381,7 @@ struct SmartPayView: View {
                 } label: {
                     Text("Try Again")
                         .font(.headline)
-                        .foregroundColor(.blue)
+                        .foregroundColor(accentTeal)
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color(.systemGray6))
@@ -502,10 +393,10 @@ struct SmartPayView: View {
                 } label: {
                     Text("Start Over")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color(hex: "0A0A1A"))
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.blue)
+                        .background(accentTeal)
                         .cornerRadius(14)
                 }
             }

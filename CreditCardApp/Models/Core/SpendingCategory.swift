@@ -116,6 +116,13 @@ enum ResetType: String, Codable, CaseIterable {
     }
 }
 
+// MARK: - Card Visual Style
+struct CardVisualStyle {
+    let gradientColors: [String]  // hex color strings
+    let logoSymbol: String        // SF Symbol name
+    let textColor: String         // hex color string
+}
+
 // MARK: - Card Types
 enum CardType: String, Codable, CaseIterable {
     // Amex
@@ -319,6 +326,45 @@ enum CardType: String, Codable, CaseIterable {
 
         case .custom:
             return []
+        }
+    }
+
+    var cardVisual: CardVisualStyle {
+        switch self {
+        case .amexGold:
+            return CardVisualStyle(gradientColors: ["D4A843", "B8860B"], logoSymbol: "star.circle.fill", textColor: "FFFFFF")
+        case .amexPlatinum:
+            return CardVisualStyle(gradientColors: ["8C8C8C", "C0C0C0", "A0A0A0"], logoSymbol: "star.circle.fill", textColor: "FFFFFF")
+        case .amexBlueCashPreferred:
+            return CardVisualStyle(gradientColors: ["1A73E8", "4FC3F7"], logoSymbol: "star.circle.fill", textColor: "FFFFFF")
+        case .chaseFreedom:
+            return CardVisualStyle(gradientColors: ["004A8F", "0073CF"], logoSymbol: "shield.fill", textColor: "FFFFFF")
+        case .chaseFreedomFlex:
+            return CardVisualStyle(gradientColors: ["0056A3", "3B9FE3"], logoSymbol: "shield.fill", textColor: "FFFFFF")
+        case .chaseFreedomUnlimited:
+            return CardVisualStyle(gradientColors: ["004080", "0068C9"], logoSymbol: "shield.fill", textColor: "FFFFFF")
+        case .chaseSapphirePreferred:
+            return CardVisualStyle(gradientColors: ["1B2A4A", "2C4070"], logoSymbol: "shield.fill", textColor: "FFFFFF")
+        case .chaseSapphireReserve:
+            return CardVisualStyle(gradientColors: ["0D1B2A", "1B3A5C", "1E4D7B"], logoSymbol: "shield.fill", textColor: "FFFFFF")
+        case .citiDoubleCash:
+            return CardVisualStyle(gradientColors: ["003DA5", "0066CC"], logoSymbol: "c.circle.fill", textColor: "FFFFFF")
+        case .capitalOneSavorOne:
+            return CardVisualStyle(gradientColors: ["D03027", "E85040"], logoSymbol: "suit.diamond.fill", textColor: "FFFFFF")
+        case .capitalOneVentureX:
+            return CardVisualStyle(gradientColors: ["1A1A2E", "2D2D44"], logoSymbol: "suit.diamond.fill", textColor: "FFFFFF")
+        case .discoverIt:
+            return CardVisualStyle(gradientColors: ["FF6B00", "FF9500"], logoSymbol: "d.circle.fill", textColor: "FFFFFF")
+        case .robinhoodGold:
+            return CardVisualStyle(gradientColors: ["00C805", "7BE87B"], logoSymbol: "leaf.fill", textColor: "1A1A1A")
+        case .paypalCashback:
+            return CardVisualStyle(gradientColors: ["003087", "009CDE"], logoSymbol: "p.circle.fill", textColor: "FFFFFF")
+        case .biltMastercard:
+            return CardVisualStyle(gradientColors: ["0A2E4D", "1A5276"], logoSymbol: "b.circle.fill", textColor: "FFFFFF")
+        case .wellsFargoActiveCash:
+            return CardVisualStyle(gradientColors: ["CD1409", "E8382D"], logoSymbol: "w.circle.fill", textColor: "FFFFFF")
+        case .custom:
+            return CardVisualStyle(gradientColors: ["6C757D", "495057"], logoSymbol: "creditcard.fill", textColor: "FFFFFF")
         }
     }
 }

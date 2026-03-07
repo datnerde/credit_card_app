@@ -22,7 +22,7 @@ struct SettingsView: View {
                             
                             if viewModel.userPreferences.preferredPointSystem == pointSystem {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(Color(hex: "00D09C"))
                             }
                         }
                         .contentShape(Rectangle())
@@ -32,6 +32,19 @@ struct SettingsView: View {
                     }
                 }
                 
+                // Payment Mode
+                Section {
+                    Toggle("Enable Apple Pay", isOn: $viewModel.userPreferences.useApplePay)
+                        .onChange(of: viewModel.userPreferences.useApplePay) { _ in
+                            viewModel.toggleApplePay()
+                        }
+                        .tint(Color(hex: "00D09C"))
+                } header: {
+                    Text("Payment Mode")
+                } footer: {
+                    Text("When off, the app just shows which card to use. Turn on to also pay via Apple Pay.")
+                }
+
                 // Quarterly Bonus Tracking
                 Section("Quarterly Bonus Tracking") {
                     Toggle("Enable Quarterly Tracking", isOn: $viewModel.userPreferences.autoUpdateSpending)
@@ -69,7 +82,7 @@ struct SettingsView: View {
                             
                             if viewModel.userPreferences.language == language {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(Color(hex: "00D09C"))
                             }
                         }
                         .contentShape(Rectangle())
