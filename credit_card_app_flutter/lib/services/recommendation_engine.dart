@@ -225,12 +225,19 @@ class RecommendationEngine {
 
     if (reward == null) return 1.0;
 
+    final multiplier = reward.multiplier.isFinite && reward.multiplier > 0
+        ? reward.multiplier
+        : 1.0;
+
     final bonus = card.quarterlyBonus;
-    if (bonus != null && bonus.category == category) {
-      return reward.multiplier > bonus.multiplier ? reward.multiplier : bonus.multiplier;
+    if (bonus != null && bonus.category == category && !bonus.isLimitReached) {
+      final bonusMult = bonus.multiplier.isFinite && bonus.multiplier > 0
+          ? bonus.multiplier
+          : 1.0;
+      return multiplier > bonusMult ? multiplier : bonusMult;
     }
 
-    return reward.multiplier;
+    return multiplier;
   }
 
   double _calculatePreferenceScore(CreditCard card, UserPreferences preferences) {
@@ -244,7 +251,9 @@ class RecommendationEngine {
     final limit = card.spendingLimits.where((s) => s.category == category).firstOrNull;
     if (limit == null) return 1.0;
 
-    final usage = limit.limit > 0 ? limit.currentSpending / limit.limit : 0.0;
+    if (limit.limit <= 0 || limit.currentSpending < 0) return 1.0;
+    final usage = limit.currentSpending / limit.limit;
+    if (!usage.isFinite) return 1.0;
     if (usage >= 1.0) return 0.0;
     if (usage >= 0.85) return 0.5;
     return 1.0;

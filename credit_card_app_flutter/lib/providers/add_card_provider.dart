@@ -26,9 +26,33 @@ class AddCardProvider extends ChangeNotifier {
 
   bool get isFormValid {
     _validationErrors = [];
-    if (cardName.trim().isEmpty) _validationErrors.add('Card name is required');
+    if (cardName.trim().isEmpty) {
+      _validationErrors.add('Card name is required');
+    } else if (cardName.trim().length > 50) {
+      _validationErrors.add('Card name must be 50 characters or less');
+    }
     if (selectedCardType != CardType.custom && rewardCategories.isEmpty) {
       _validationErrors.add('At least one reward category required');
+    }
+    for (final reward in rewardCategories) {
+      if (reward.multiplier <= 0) {
+        _validationErrors.add('${reward.category.displayName} multiplier must be positive');
+      } else if (reward.multiplier > 100) {
+        _validationErrors.add('${reward.category.displayName} multiplier cannot exceed 100x');
+      }
+    }
+    for (final limit in spendingLimits) {
+      if (limit.limit <= 0) {
+        _validationErrors.add('${limit.category.displayName} spending limit must be positive');
+      }
+    }
+    if (quarterlyBonus != null && hasQuarterlyBonus) {
+      if (quarterlyBonus!.limit <= 0) {
+        _validationErrors.add('Quarterly bonus limit must be positive');
+      }
+      if (quarterlyBonus!.multiplier <= 0) {
+        _validationErrors.add('Quarterly bonus multiplier must be positive');
+      }
     }
     return _validationErrors.isEmpty;
   }

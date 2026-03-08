@@ -56,25 +56,38 @@ class SmartPayProvider extends ChangeNotifier {
     return _purchaseAmount! * _recommendedCard!.multiplier;
   }
 
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
   Future<void> loadData() async {
-    _userCards = await _dataManager.fetchCards();
-    _userPreferences = await _dataManager.loadUserPreferences();
+    try {
+      _userCards = await _dataManager.fetchCards();
+      _userPreferences = await _dataManager.loadUserPreferences();
+      _errorMessage = null;
+    } catch (e) {
+      _errorMessage = 'Failed to load data: $e';
+    }
     notifyListeners();
   }
 
   void selectCategory(SpendingCategory category) {
-    _detectedCategory = category;
-    _purchaseDescription = category.displayName;
-    _analytics.trackRecommendation(category.name);
+    try {
+      _detectedCategory = category;
+      _purchaseDescription = category.displayName;
+      _analytics.trackRecommendation(category.name);
 
-    final response = _engine.getInstantRecommendation(
-      category: category,
-      userCards: _userCards,
-      userPreferences: _userPreferences,
-    );
+      final response = _engine.getInstantRecommendation(
+        category: category,
+        userCards: _userCards,
+        userPreferences: _userPreferences,
+      );
 
-    _applyResponse(response);
-    _state = PaymentFlowState.recommendationReady;
+      _applyResponse(response);
+      _state = PaymentFlowState.recommendationReady;
+    } catch (e) {
+      _state = PaymentFlowState.paymentFailed;
+      _reasoning = 'Something went wrong. Please try again.';
+    }
     notifyListeners();
   }
 
@@ -84,14 +97,19 @@ class SmartPayProvider extends ChangeNotifier {
     _state = PaymentFlowState.analyzing;
     notifyListeners();
 
-    final response = _engine.getRecommendation(
-      query: _purchaseDescription,
-      userCards: _userCards,
-      userPreferences: _userPreferences,
-    );
+    try {
+      final response = _engine.getRecommendation(
+        query: _purchaseDescription,
+        userCards: _userCards,
+        userPreferences: _userPreferences,
+      );
 
-    _applyResponse(response);
-    _state = PaymentFlowState.recommendationReady;
+      _applyResponse(response);
+      _state = PaymentFlowState.recommendationReady;
+    } catch (e) {
+      _state = PaymentFlowState.paymentFailed;
+      _reasoning = 'Could not analyze your purchase. Please try again.';
+    }
     notifyListeners();
   }
 

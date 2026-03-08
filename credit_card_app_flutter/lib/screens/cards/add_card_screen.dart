@@ -18,6 +18,9 @@ class AddCardScreen extends StatefulWidget {
 }
 
 class _AddCardScreenState extends State<AddCardScreen> {
+  late TextEditingController _nameController;
+  final Map<SpendingCategory, TextEditingController> _multiplierControllers = {};
+
   @override
   void initState() {
     super.initState();
@@ -27,6 +30,23 @@ class _AddCardScreenState extends State<AddCardScreen> {
     } else {
       provider.resetForm();
     }
+    _nameController = TextEditingController(text: provider.cardName);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    for (final c in _multiplierControllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  TextEditingController _getMultiplierController(RewardCategory reward) {
+    return _multiplierControllers.putIfAbsent(
+      reward.category,
+      () => TextEditingController(text: reward.multiplier.toString()),
+    );
   }
 
   @override
@@ -92,7 +112,15 @@ class _AddCardScreenState extends State<AddCardScreen> {
                       );
                     }).toList(),
                     onChanged: (type) {
-                      if (type != null) provider.loadDefaultsForCardType(type);
+                      if (type != null) {
+                        provider.loadDefaultsForCardType(type);
+                        _nameController.text = provider.cardName;
+                        // Clear old multiplier controllers
+                        for (final c in _multiplierControllers.values) {
+                          c.dispose();
+                        }
+                        _multiplierControllers.clear();
+                      }
                     },
                   ),
                 ),
@@ -102,9 +130,7 @@ class _AddCardScreenState extends State<AddCardScreen> {
                 Text('Card Name', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 TextField(
-                  controller: TextEditingController(text: provider.cardName)
-                    ..selection = TextSelection.fromPosition(
-                        TextPosition(offset: provider.cardName.length)),
+                  controller: _nameController,
                   onChanged: (v) => provider.cardName = v,
                   decoration: const InputDecoration(hintText: 'e.g., My Amex Gold'),
                 ),
@@ -143,6 +169,7 @@ class _AddCardScreenState extends State<AddCardScreen> {
   }
 
   Widget _buildRewardRow(BuildContext context, AddCardProvider provider, RewardCategory reward) {
+    final controller = _getMultiplierController(reward);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -160,10 +187,12 @@ class _AddCardScreenState extends State<AddCardScreen> {
             child: TextField(
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               textAlign: TextAlign.center,
-              controller: TextEditingController(text: reward.multiplier.toString()),
+              controller: controller,
               onChanged: (v) {
                 final val = double.tryParse(v);
-                if (val != null) provider.updateMultiplier(reward.category, val);
+                if (val != null && val > 0 && val <= 100) {
+                  provider.updateMultiplier(reward.category, val);
+                }
               },
               decoration: const InputDecoration(
                 isDense: true,
@@ -175,7 +204,10 @@ class _AddCardScreenState extends State<AddCardScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.close, size: 18, color: AppTheme.textTertiary),
-            onPressed: () => provider.toggleCategory(reward.category),
+            onPressed: () {
+              _multiplierControllers.remove(reward.category)?.dispose();
+              provider.toggleCategory(reward.category);
+            },
           ),
         ],
       ),

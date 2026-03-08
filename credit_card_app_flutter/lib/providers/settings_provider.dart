@@ -20,8 +20,14 @@ class SettingsProvider extends ChangeNotifier {
   PointType get preferredPointSystem => _preferences.preferredPointSystem;
 
   Future<void> _load() async {
-    _preferences = await _dataManager.loadUserPreferences();
-    _hasCompletedOnboarding = await _dataManager.hasCompletedOnboarding();
+    try {
+      _preferences = await _dataManager.loadUserPreferences();
+      _hasCompletedOnboarding = await _dataManager.hasCompletedOnboarding();
+    } catch (_) {
+      // Use defaults on failure
+      _preferences = UserPreferences();
+      _hasCompletedOnboarding = false;
+    }
     notifyListeners();
   }
 

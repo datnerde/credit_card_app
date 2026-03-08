@@ -113,8 +113,14 @@ class CardListProvider extends ChangeNotifier {
   Future<void> loadSampleData() async {
     _isLoading = true;
     notifyListeners();
-    await _dataManager.loadSampleData();
-    await loadCards();
+    try {
+      await _dataManager.loadSampleData();
+      await loadCards();
+    } catch (e) {
+      _errorMessage = 'Failed to load sample data: $e';
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   void selectCard(CreditCard? card) {
@@ -132,13 +138,20 @@ class CardListProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleCardActive(String cardId) {
+  Future<void> toggleCardActive(String cardId) async {
     final idx = _cards.indexWhere((c) => c.id == cardId);
     if (idx >= 0) {
       _cards[idx].isActive = !_cards[idx].isActive;
       _cards[idx].updatedAt = DateTime.now();
-      _dataManager.updateCard(_cards[idx]);
       notifyListeners();
+      try {
+        await _dataManager.updateCard(_cards[idx]);
+      } catch (e) {
+        // Revert on failure
+        _cards[idx].isActive = !_cards[idx].isActive;
+        _errorMessage = 'Failed to update card: $e';
+        notifyListeners();
+      }
     }
   }
 }
