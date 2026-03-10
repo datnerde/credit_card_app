@@ -28,8 +28,105 @@ class RecommendationEngine {
         }
     }
     
-    // MARK: - Main Recommendation Flow
-    
+    // MARK: - Category Fallbacks
+
+    private let categoryFallbacks: [SpendingCategory: [(SpendingCategory, Double)]] = [
+        .coffee: [(.dining, 0.8), (.restaurants, 0.7)],
+        .fastFood: [(.dining, 0.85), (.restaurants, 0.8)],
+        .restaurants: [(.dining, 0.9)],
+        .airfare: [(.travel, 0.85)],
+        .hotels: [(.travel, 0.8)],
+        .wholeFoods: [(.groceries, 0.95)],
+        .costco: [(.groceries, 0.7)],
+        .amazon: [(.online, 0.9)],
+        .target: [(.general, 0.6)],
+        .walmart: [(.groceries, 0.6), (.general, 0.5)],
+        .transit: [(.travel, 0.6)],
+        .streaming: [(.entertainment, 0.7)],
+    ]
+
+    // MARK: - Instant Recommendation (Synchronous, Category-Based)
+
+    func getInstantRecommendation(
+        category: SpendingCategory,
+        userCards: [CreditCard],
+        userPreferences: UserPreferences
+    ) -> RecommendationResponse {
+        guard !userCards.isEmpty else {
+            return RecommendationResponse(
+                reasoning: "Please add your credit cards first to get personalized recommendations."
+            )
+        }
+
+        // Score cards for the primary category
+        var scoredCards = scoreCards(cards: userCards, category: category, merchant: nil, preferences: userPreferences)
+
+        // If no card has a category-specific reward, try fallback categories
+        let hasCategoryMatch = scoredCards.contains { $0.categoryScore > 1.0 }
+        if !hasCategoryMatch, let fallbacks = categoryFallbacks[category] {
+            for (fallbackCategory, scoreMultiplier) in fallbacks {
+                let fallbackScored = scoreCards(cards: userCards, category: fallbackCategory, merchant: nil, preferences: userPreferences)
+                for card in fallbackScored where card.categoryScore > 1.0 {
+                    let adjustedScore = CardScore(
+                        card: card.card,
+                        category: category,
+                        baseScore: card.baseScore,
+                        categoryScore: card.categoryScore * scoreMultiplier,
+                        preferenceScore: card.preferenceScore,
+                        limitScore: card.limitScore,
+                        totalScore: card.totalScore * scoreMultiplier,
+                        reasoning: card.reasoning
+                    )
+                    scoredCards.append(adjustedScore)
+                }
+            }
+        }
+
+        let recommendations = filterAndRankRecommendations(scoredCards)
+
+        guard let primary = recommendations.first else {
+            return RecommendationResponse(
+                reasoning: "No suitable cards found for \(category.displayName).",
+                warnings: ["Consider adding a card with rewards for this category."]
+            )
+        }
+
+        let primaryRec = createCardRecommendation(from: primary, rank: 1)
+        let secondaryRec = recommendations.count > 1 ? createCardRecommendation(from: recommendations[1], rank: 2) : nil
+
+        // Build concise reasoning
+        var reasoning = "Use **\(primary.card.name)** for \(category.displayName.lowercased())"
+        if let reward = primary.card.rewardCategories.first(where: { $0.category == category || $0.category == .general }) {
+            reasoning += " — \(String(format: "%.0f", reward.multiplier))x \(reward.pointType.displayName)"
+        }
+        reasoning += "."
+
+        if let limit = primary.card.spendingLimits.first(where: { $0.category == category }) {
+            if limit.isLimitReached {
+                reasoning += " Limit reached for this category."
+            } else if limit.isWarningThreshold {
+                reasoning += " Almost at your spending limit."
+            }
+        }
+
+        if let bonus = primary.card.quarterlyBonus, bonus.category == category {
+            let remaining = bonus.limit - bonus.currentSpending
+            if remaining > 0 {
+                reasoning += " Q\(bonus.quarter) bonus active — $\(Int(remaining)) remaining at \(String(format: "%.0f", bonus.multiplier))x!"
+            }
+        }
+
+        return RecommendationResponse(
+            primaryRecommendation: primaryRec,
+            secondaryRecommendation: secondaryRec,
+            reasoning: reasoning,
+            warnings: generateWarnings(recommendations),
+            suggestions: generateSuggestions(recommendations, category, userPreferences)
+        )
+    }
+
+    // MARK: - Main Recommendation Flow (Async - Legacy)
+
     func getRecommendation(for query: String, userCards: [CreditCard], userPreferences: UserPreferences) async throws -> RecommendationResponse {
         // Parse user query
         let parsedQuery = nlpProcessor.parseUserQuery(query)

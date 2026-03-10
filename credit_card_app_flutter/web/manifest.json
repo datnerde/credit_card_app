@@ -1,0 +1,11 @@
+{
+  "name": "SmartCard",
+  "short_name": "SmartCard",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0A0A0F",
+  "theme_color": "#6366F1",
+  "description": "Credit card recommendation app",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
+}

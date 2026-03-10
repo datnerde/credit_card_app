@@ -52,6 +52,7 @@ class SmartPaymentViewModel: BaseViewModelImpl {
     @Published var userCards: [CreditCard] = []
     @Published var userPreferences: UserPreferences = UserPreferences()
     @Published var showCardLinkingSheet: Bool = false
+    @Published var useApplePay: Bool = false
 
     // MARK: - Services
     private let recommendationEngine: RecommendationEngine
@@ -110,6 +111,7 @@ class SmartPaymentViewModel: BaseViewModelImpl {
             let prefs = try await dataManager.loadUserPreferences()
             await MainActor.run {
                 self.userPreferences = prefs
+                self.useApplePay = prefs.useApplePay
             }
         } catch {
             await MainActor.run { handleError(error) }
@@ -197,6 +199,57 @@ class SmartPaymentViewModel: BaseViewModelImpl {
         purchaseDescription = "I'm buying \(category.displayName.lowercased())"
         detectedCategory = category
         analyzePurchase()
+    }
+
+    /// Category-first flow: user picks a category, gets instant recommendation
+    func selectCategory(_ category: SpendingCategory) {
+        guard !userCards.isEmpty else {
+            handleError(RecommendationError.noCardsAvailable)
+            return
+        }
+
+        detectedCategory = category
+        flowState = .analyzing
+
+        trackEvent("category_selected", properties: ["category": category.rawValue])
+
+        // Brief delay for smooth animation, then show result
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self = self else { return }
+
+            let response = self.recommendationEngine.getInstantRecommendation(
+                category: category,
+                userCards: self.userCards,
+                userPreferences: self.userPreferences
+            )
+
+            let primaryCard = response.primaryRecommendation.flatMap { rec in
+                self.userCards.first { $0.id == rec.cardId }
+            }
+            let secondCard = response.secondaryRecommendation.flatMap { rec in
+                self.userCards.first { $0.id == rec.cardId }
+            }
+
+            let amount = Double(self.purchaseAmount) ?? 0
+            let points = primaryCard.map {
+                self.walletService.calculatePointsEarned(card: $0, category: category, amount: amount)
+            } ?? 0
+            let pointsSecondary = secondCard.map {
+                self.walletService.calculatePointsEarned(card: $0, category: category, amount: amount)
+            } ?? 0
+
+            self.recommendedCard = primaryCard
+            self.secondaryCard = secondCard
+            self.recommendationReasoning = response.reasoning
+            self.estimatedPoints = points
+            self.estimatedPointsSecondary = pointsSecondary
+            self.flowState = .recommendationReady
+        }
+    }
+
+    /// Dismiss recommendation (for "Got it!" flow when Apple Pay is off)
+    func dismissRecommendation() {
+        reset()
     }
 
     // MARK: - Payment Execution
@@ -339,7 +392,7 @@ class SmartPaymentViewModel: BaseViewModelImpl {
     }
 
     var canPay: Bool {
-        recommendedCard != nil && parsedAmount > 0
+        recommendedCard != nil && parsedAmount > 0 && useApplePay
     }
 
     var pointTypeDisplay: String {

@@ -129,17 +129,35 @@ struct UserPreferences: Codable {
     var language: Language
     var notificationsEnabled: Bool
     var autoUpdateSpending: Bool
-    
+    var useApplePay: Bool
+
     init(preferredPointSystem: PointType = .membershipRewards,
          alertThreshold: Double = 0.85,
          language: Language = .english,
          notificationsEnabled: Bool = true,
-         autoUpdateSpending: Bool = false) {
+         autoUpdateSpending: Bool = false,
+         useApplePay: Bool = false) {
         self.preferredPointSystem = preferredPointSystem
         self.alertThreshold = alertThreshold
         self.language = language
         self.notificationsEnabled = notificationsEnabled
         self.autoUpdateSpending = autoUpdateSpending
+        self.useApplePay = useApplePay
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case preferredPointSystem, alertThreshold, language
+        case notificationsEnabled, autoUpdateSpending, useApplePay
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        preferredPointSystem = try container.decode(PointType.self, forKey: .preferredPointSystem)
+        alertThreshold = try container.decode(Double.self, forKey: .alertThreshold)
+        language = try container.decode(Language.self, forKey: .language)
+        notificationsEnabled = try container.decode(Bool.self, forKey: .notificationsEnabled)
+        autoUpdateSpending = try container.decode(Bool.self, forKey: .autoUpdateSpending)
+        useApplePay = try container.decodeIfPresent(Bool.self, forKey: .useApplePay) ?? false
     }
 }
 
