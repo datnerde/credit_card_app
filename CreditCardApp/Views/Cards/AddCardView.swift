@@ -127,7 +127,7 @@ struct AddCardView: View {
                         .foregroundColor(.white)
                         .padding()
                         .frame(maxWidth: .infinity)
-                        .background(selectedCard == nil ? Color.gray : Color.blue)
+                        .background(selectedCard == nil ? Color.gray : Color(hex: "00D09C"))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .disabled(selectedCard == nil || viewModel.isLoading)
                         .padding(.horizontal, 24)
@@ -232,30 +232,21 @@ struct AddCardView: View {
     @ViewBuilder
     private func selectedCardPreviewView(card: CardOption) -> some View {
         VStack(spacing: 12) {
-            HStack {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                    .font(.title2)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Card Selected!")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    Text(card.name)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                
-                Spacer()
-            }
-            
-            // Show default rewards preview
+            // Card visual
+            CreditCardVisualView(
+                cardType: card.cardType,
+                cardName: card.name,
+                size: .full
+            )
+
+            // Rewards preview
             VStack(alignment: .leading, spacing: 8) {
-                Text("Rewards Preview:")
+                Text("Rewards")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+
                 LazyVGrid(columns: [
                     GridItem(.flexible()),
                     GridItem(.flexible())
@@ -264,12 +255,12 @@ struct AddCardView: View {
                         HStack(spacing: 4) {
                             Image(systemName: reward.category.icon)
                                 .font(.caption)
-                                .foregroundColor(.blue)
-                            
+                                .foregroundColor(Color(hex: "00D09C"))
+
                             Text("\(reward.multiplier, specifier: "%.0f")x")
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                            
+
                             Text(reward.category.displayName)
                                 .font(.caption)
                                 .foregroundColor(.secondary)

@@ -15,31 +15,31 @@ struct EmptyStateView: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Image(systemName: "creditcard")
+            Image(systemName: "wallet.pass")
                 .font(.system(size: 60))
-                .foregroundColor(.secondary)
-            
+                .foregroundColor(Color(hex: "00D09C").opacity(0.5))
+
             VStack(spacing: 8) {
                 Text(title)
                     .font(.title2)
                     .fontWeight(.semibold)
                     .multilineTextAlignment(.center)
-                
+
                 Text(message)
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
-            
+
             if let buttonTitle = buttonTitle, let action = action {
                 Button(action: action) {
                     Text(buttonTitle)
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color(hex: "0A0A1A"))
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
-                        .background(Color.blue)
+                        .background(Color(hex: "00D09C"))
                         .cornerRadius(12)
                 }
             }

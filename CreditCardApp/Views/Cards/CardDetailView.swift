@@ -9,38 +9,25 @@ struct CardDetailView: View {
         NavigationView {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    // Card Header
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Image(systemName: "creditcard.fill")
-                                .font(.title)
-                                .foregroundColor(.blue)
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(card.name)
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                
-                                Text(card.cardType.displayName)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                            
-                            if !card.isActive {
-                                Text("Inactive")
-                                    .font(.caption)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.gray)
-                                    .foregroundColor(.white)
-                                    .clipShape(Capsule())
-                            }
+                    // Card Visual Header
+                    VStack(spacing: 12) {
+                        CreditCardVisualView(
+                            cardType: card.cardType,
+                            cardName: card.name,
+                            size: .full
+                        )
+
+                        if !card.isActive {
+                            Text("Inactive")
+                                .font(.caption)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.gray)
+                                .foregroundColor(.white)
+                                .clipShape(Capsule())
                         }
-                        
-                        Divider()
                     }
+                    .frame(maxWidth: .infinity)
                     .padding(.horizontal)
                     
                     // Reward Categories
@@ -190,20 +177,21 @@ struct CardDetailView: View {
 
 struct RewardCategoryCard: View {
     let category: RewardCategory
-    
+    private let accentTeal = Color(hex: "00D09C")
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: category.category.icon)
-                    .foregroundColor(.blue)
+                    .foregroundColor(accentTeal)
                     .font(.title3)
-                
+
                 Spacer()
-                
+
                 Text("\(category.multiplier, specifier: "%.1f")x")
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(.blue)
+                    .foregroundColor(accentTeal)
             }
             
             Text(category.category.displayName)
@@ -223,12 +211,13 @@ struct RewardCategoryCard: View {
 
 struct SpendingLimitCard: View {
     let limit: SpendingLimit
-    
+    private let accentTeal = Color(hex: "00D09C")
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: limit.category.icon)
-                    .foregroundColor(.blue)
+                    .foregroundColor(accentTeal)
                     .font(.title3)
                 
                 VStack(alignment: .leading, spacing: 2) {
@@ -258,7 +247,7 @@ struct SpendingLimitCard: View {
                 value: max(0, limit.currentSpending), 
                 total: max(1, limit.limit)
             )
-                .progressViewStyle(LinearProgressViewStyle(tint: limit.isLimitReached ? .red : (limit.isWarningThreshold ? .orange : .blue)))
+                .progressViewStyle(LinearProgressViewStyle(tint: limit.isLimitReached ? .red : (limit.isWarningThreshold ? .orange : accentTeal)))
             
             if limit.isLimitReached {
                 HStack {
